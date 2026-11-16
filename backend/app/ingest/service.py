@@ -162,8 +162,9 @@ def index_repo(conn: sqlite3.Connection, owner: str, name: str, zip_bytes: bytes
         chunk_count = 0
         for path, language, text in files:
             file_id = conn.execute(
-                "INSERT INTO files (repo_id, path, language, line_count) VALUES (?, ?, ?, ?)",
-                (repo_id, path, language, len(split_lines(text))),
+                "INSERT INTO files (repo_id, path, language, line_count, content)"
+                " VALUES (?, ?, ?, ?, ?)",
+                (repo_id, path, language, len(split_lines(text)), text),
             ).lastrowid
             for ch in chunk_text(text):
                 chunk_id = conn.execute(

@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS files (
     path       TEXT NOT NULL,
     language   TEXT NOT NULL,
     line_count INTEGER NOT NULL,
+    -- nội dung gốc, để agent đọc đúng từng dòng (các đoạn trong chunks có chồng lấn)
+    content    TEXT NOT NULL,
     UNIQUE (repo_id, path)
 );
 

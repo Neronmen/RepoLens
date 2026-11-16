@@ -7,7 +7,7 @@ from app.db import build_match_query, connect, search_chunks
 def conn():
     c = connect(":memory:")
     c.execute("INSERT INTO repos (id, owner, name) VALUES (1, 'a', 'b')")
-    c.execute("INSERT INTO files (id, repo_id, path, language, line_count) VALUES (1, 1, 'auth.py', 'python', 10)")
+    c.execute("INSERT INTO files (id, repo_id, path, language, line_count, content) VALUES (1, 1, 'auth.py', 'python', 10, '')")
     mau = [
         (1, "auth.py", 1, 5, "def login_user(name, password):\n    return check_password(name, password)"),
         (2, "auth.py", 6, 10, "def render_homepage():\n    return 'xin chao'"),
