@@ -1,0 +1,147 @@
+.viewer {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.head {
+  flex: none;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.back {
+  display: none;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+}
+
+.path {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl; /* đường dẫn dài thì cắt phần đầu, giữ lại tên file */
+  text-align: left;
+}
+
+.path b {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.gh {
+  flex: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--faint);
+}
+
+.gh:hover {
+  color: var(--accent);
+}
+
+.code {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.line {
+  display: flex;
+  min-width: max-content;
+  border-left: 2px solid transparent;
+}
+
+.num {
+  flex: none;
+  text-align: right;
+  padding-right: 20px;
+  color: #6b6b75;
+  user-select: none;
+}
+
+.text {
+  white-space: pre;
+  color: var(--text-2);
+  padding-right: 24px;
+}
+
+.hit {
+  background: var(--accent-wash);
+  border-left-color: var(--accent);
+}
+
+.hit .num {
+  color: var(--accent);
+}
+
+.hit .text {
+  color: var(--text);
+}
+
+.more {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  padding: 0 20px;
+}
+
+.more:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.empty,
+.loading,
+.error {
+  margin: 0;
+  padding: 28px 20px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--faint);
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.error {
+  color: var(--danger);
+}
+
+@media (max-width: 1099px) {
+  .back {
+    display: inline-flex;
+    align-items: center;
+  }
+}
