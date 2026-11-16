@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.5-flash-lite"
     # frontend chạy ở đâu thì cho phép gọi API từ đó
     cors_origins: list[str] = ["http://localhost:5173"]
+    # chỗ lưu database SQLite
+    db_path: Path = ROOT_DIR / "data" / "repolens.sqlite"
 
 
 def get_settings() -> Settings:
