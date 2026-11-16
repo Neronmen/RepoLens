@@ -113,6 +113,12 @@ function Composer({ busy, onSend, onStop }: { busy: boolean; onSend: (q: string)
   useEffect(() => {
     const el = area.current
     if (!el) return
+    // Ô rỗng thì để CSS (rows=1) tự quyết định chiều cao. Đo khi chưa có chữ từng cho ra
+    // kết quả 160px (mức tối đa) ngay lúc vừa mở trang, làm ô nhập to bất thường.
+    if (!value) {
+      el.style.height = ''
+      return
+    }
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`
   }, [value])
