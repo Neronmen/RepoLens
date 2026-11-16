@@ -1,0 +1,269 @@
+.page {
+  min-height: 100vh;
+  overflow-x: clip; /* chặn cuộn ngang nếu có phần tử nào lỡ tràn */
+  background: var(--bg);
+  color: var(--text);
+}
+
+.container {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-left: 32px;
+  padding-right: 32px;
+}
+
+/* ---------- nav ---------- */
+.header {
+  padding-top: 12px;
+}
+
+.navRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 8px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  transition: color 0.15s;
+}
+
+.nav a:hover {
+  color: var(--accent);
+}
+
+/* ---------- hero ---------- */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 48px;
+  align-items: center;
+  padding-top: 56px;
+  padding-bottom: 40px;
+}
+
+.heroText {
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0 0 24px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(44px, 5.3vw, 76px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+/* Mỗi dòng của tiêu đề được cắt gọn trong "mặt nạ" để GSAP trượt chữ lên từ dưới.
+   Đệm thêm dưới đáy cho các nét thò xuống (p, g) khỏi bị cắt. */
+.lineMask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+.line {
+  display: block;
+}
+
+.lead {
+  margin: 28px 0 0;
+  max-width: 520px;
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.visual {
+  min-width: 0;
+}
+
+@media (min-width: 960px) {
+  .hero {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 48px;
+  }
+}
+
+/* ---------- sections ---------- */
+.section {
+  padding-top: 96px;
+  padding-bottom: 24px;
+  scroll-margin-top: 8px;
+}
+
+.kicker {
+  margin: 0 0 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.h2 {
+  margin: 0;
+  max-width: 640px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(30px, 3.2vw, 40px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px; /* khe 1px để nền .steps lộ ra thành đường kẻ giữa các ô */
+  margin: 48px 0 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.step {
+  min-width: 0;
+  padding: 32px 28px 36px;
+  background: var(--bg);
+}
+
+.stepNum {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.stepTitle {
+  margin: 18px 0 10px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.stepText {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ---------- trace ---------- */
+.trace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+  align-items: center;
+  padding-top: 96px;
+}
+
+.traceText {
+  min-width: 0;
+}
+
+.traceLead {
+  margin: 20px 0 0;
+  max-width: 440px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+@media (min-width: 960px) {
+  .trace {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 56px;
+  }
+}
+
+/* ---------- footer ---------- */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 56px;
+  padding: 24px 0 40px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--faint);
+}
+
+.brand {
+  font-family: var(--font-mono);
+}
+
+.source {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  transition: color 0.15s;
+}
+
+.source:hover {
+  color: var(--accent);
+}
+
+/* ---------- màn hẹp ---------- */
+@media (max-width: 720px) {
+  .container {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .nav a {
+    padding: 0 7px;
+  }
+
+  .hero {
+    padding-top: 32px;
+    gap: 40px;
+  }
+
+  .lead {
+    font-size: 17px;
+    margin-top: 22px;
+  }
+
+  .section,
+  .trace {
+    padding-top: 72px;
+  }
+
+  .steps {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 32px;
+  }
+
+  .step {
+    padding: 24px 20px 28px;
+  }
+}
