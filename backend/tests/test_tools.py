@@ -53,7 +53,8 @@ def test_grep_gioi_han_theo_thu_muc(db):
 def test_grep_qua_nhieu_ket_qua_thi_bao_con_nua(db):
     conn, repo, _ = db
     out = run_tool(conn, repo, "grep", {"text": "# dong"})
-    assert "còn 265 dòng khớp nữa" in out
+    assert out.count("\n") == 30  # 30 dòng khớp + 1 dòng báo còn nữa
+    assert "còn nhiều dòng khớp nữa" in out
 
 
 def test_ky_tu_dac_biet_cua_like_duoc_hieu_dung_nghia_den(db):
@@ -87,6 +88,58 @@ def test_read_file_chiu_duoc_tham_so_la(db):
     assert "(dòng 1-" in run_tool(conn, repo, "read_file", {"path": "src/auth.py", "start_line": "abc"})
     assert "(dòng 1-" in run_tool(conn, repo, "read_file", {"path": "src/auth.py", "start_line": -5})
     assert "chỉ có" in run_tool(conn, repo, "read_file", {"path": "src/auth.py", "start_line": 9999})
+
+
+def test_tham_so_null_hoac_sai_kieu_khong_bi_hieu_thanh_chu_none(db):
+    conn, repo, _ = db
+    # trước đây None thành chuỗi "None" rồi công cụ báo sai là không có dòng nào khớp
+    assert "src/auth.py:3:" in run_tool(conn, repo, "grep", {"text": "login_user", "path_prefix": None})
+    assert "src/auth.py" in run_tool(conn, repo, "list_files", {"path_prefix": None})
+    assert "Thiếu tham số" in run_tool(conn, repo, "grep", {"text": None})
+    assert "Thiếu tham số" in run_tool(conn, repo, "search_code", {"query": None})
+    assert "Thiếu tham số" in run_tool(conn, repo, "search_code", {"query": ["a", "b"]})
+
+
+def test_duong_dan_dang_khac_van_hieu_duoc(db):
+    conn, repo, _ = db
+    for prefix in ["./src", "/src/", "src"]:
+        assert "src/auth.py:3:" in run_tool(conn, repo, "grep", {"text": "login_user", "path_prefix": prefix})
+    assert "Không có file nào có đường dẫn bắt đầu bằng" in run_tool(
+        conn, repo, "grep", {"text": "login_user", "path_prefix": "khong_co/"}
+    )
+    assert "dòng 3-4" in run_tool(conn, repo, "read_file", {"path": "./src/auth.py", "start_line": 3, "end_line": 4})
+
+
+def test_read_file_cac_kieu_khoang_dong_vo_ly(db):
+    conn, repo, _ = db
+    doc = lambda **kw: run_tool(conn, repo, "read_file", {"path": "src/auth.py", **kw})  # noqa: E731
+    # trước đây end_line âm làm Python cắt "từ cuối lên" và trả về gần hết file
+    am = doc(start_line=1, end_line=-5)
+    assert "(dòng 1-1)" in am and am.count("\n") < 5
+    assert "(dòng 10-10)" in doc(start_line=10, end_line=5)
+    assert "(dòng 10-10)" in doc(start_line=10, end_line=0)
+    for la in ["1e999", "inf", "nan", 10**400, None, [], {}]:
+        assert isinstance(doc(start_line=la, end_line=la), str)
+
+
+def test_ten_cong_cu_hoac_khoa_tham_so_la_kieu_khong_sap(db):
+    conn, repo, _ = db
+    assert "Không có công cụ" in run_tool(conn, repo, ["grep"], {})
+    assert "Không có công cụ" in run_tool(conn, repo, None, {})
+    assert isinstance(run_tool(conn, repo, "grep", {1: 2, "text": "login"}), str)
+    assert "Tham số không hợp lệ" in run_tool(conn, repo, "grep", ["text"])
+
+
+def test_grep_dung_som_tren_repo_lon():
+    import time
+
+    conn = connect(":memory:")
+    # 600 file, mỗi file đều có chuỗi cần tìm: nếu quét hết thì chậm
+    index_repo(conn, "a", "lon", tao_zip({f"r/f{i}.py": "x = 1\n" * 3000 for i in range(600)}))
+    t = time.perf_counter()
+    out = run_tool(conn, 1, "grep", {"text": "x = 1"})
+    assert time.perf_counter() - t < 0.5
+    assert "còn nhiều dòng khớp nữa" in out
 
 
 def test_goi_sai_thi_nhan_loi_nhan_chu_khong_sap(db):
