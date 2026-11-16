@@ -1,0 +1,21 @@
+# bí mật, tuyệt đối đừng commit
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# node
+node_modules/
+dist/
+
+# dữ liệu local
+data/
+*.sqlite
+*.db
+.DS_Store
