@@ -1,0 +1,61 @@
+/* Khung vuông giữ chỗ từ đầu (aspect-ratio), nên canvas tải xong không làm giật bố cục. */
+.frame {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: radial-gradient(circle at 60% 40%, var(--accent-wash) 0%, var(--bg) 62%);
+}
+
+.fallback,
+.host {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.fallback {
+  display: block;
+  transition: opacity 0.7s ease;
+}
+
+.hidden {
+  opacity: 0;
+}
+
+.label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  will-change: transform, opacity;
+}
+
+.badge {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+@media (max-width: 480px) {
+  .label {
+    font-size: 10px;
+  }
+}
