@@ -1,0 +1,209 @@
+.app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.bar {
+  flex: none;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.barLeft,
+.barRight {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.barLeft {
+  flex: 1;
+}
+
+.slash {
+  color: #3a3a41;
+}
+
+.repoName {
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repoName b {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.pill {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.meter {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.filesBtn,
+.newRepo {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.filesBtn:hover,
+.newRepo:hover {
+  border-color: var(--accent);
+}
+
+.filesBtn[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.filesBtn {
+  display: none;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 248px minmax(380px, 560px) minmax(0, 1fr);
+}
+
+.files,
+.chat,
+.code {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.files,
+.chat {
+  border-right: 1px solid var(--border);
+}
+
+.loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--faint);
+}
+
+.problemPage {
+  min-height: 100vh;
+  padding: 20px 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.problem {
+  max-width: 520px;
+  margin: auto;
+  padding-bottom: 80px;
+}
+
+.problem h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.problem p {
+  margin: 16px 0 28px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+@media (max-width: 1279px) {
+  .body {
+    grid-template-columns: 220px minmax(340px, 480px) minmax(0, 1fr);
+  }
+
+  .meter {
+    display: none;
+  }
+}
+
+/* Dưới 1100px chỉ hiện một khung một lúc, chuyển bằng nút Files và bằng việc bấm vào trích dẫn. */
+@media (max-width: 1099px) {
+  .body {
+    display: block;
+  }
+
+  .files,
+  .chat,
+  .code {
+    height: 100%;
+    border-right: 0;
+    display: none;
+  }
+
+  .body[data-panel='files'] .files,
+  .body[data-panel='chat'] .chat,
+  .body[data-panel='code'] .code {
+    display: block;
+  }
+
+  .filesBtn {
+    display: inline-flex;
+  }
+
+  .pill {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .bar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .barLeft {
+    gap: 8px;
+  }
+
+  .slash {
+    display: none;
+  }
+
+  .newRepo {
+    display: none;
+  }
+}
