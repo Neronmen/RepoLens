@@ -22,6 +22,9 @@ def _to_contents(messages: list[Message]) -> list[types.Content]:
                         )
                     )
                 )
+            # lời nhắn thêm của mình đi kèm kết quả công cụ (ví dụ "hết lượt rồi")
+            if m.content:
+                parts.append(types.Part(text=m.content))
             role = "user"
         else:
             if m.content:
