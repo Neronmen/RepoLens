@@ -16,6 +16,7 @@ MAX_READ_LINES = 150
 MAX_GREP_MATCHES = 30
 MAX_LIST_FILES = 200
 MAX_OUTPUT_CHARS = 9000
+SEARCH_PREVIEW_LINES = 20
 
 TOOLS = [
     ToolSpec(
@@ -103,13 +104,17 @@ def _like_prefix(prefix: str) -> str:
 
 
 def search_code(conn: sqlite3.Connection, repo_id: int, query: str = "", **_: Any) -> str:
-    hits = search_chunks(conn, repo_id, str(query), limit=6)
+    hits = search_chunks(conn, repo_id, str(query), limit=5)
     if not hits:
         return "Không tìm thấy gì. Thử từ khóa khác (tiếng Anh, giống tên trong code) hoặc dùng list_files."
     blocks = []
     for h in hits:
-        body = _numbered(split_lines(h["text"])[:40], h["start_line"])
-        blocks.append(f"### {h['path']} (dòng {h['start_line']}-{h['end_line']})\n{body}")
+        # Chỉ đưa phần đầu mỗi đoạn, đủ để model biết nên đọc kỹ chỗ nào bằng
+        # read_file. Đưa hết thì mỗi lần tìm tốn cả chục nghìn ký tự token.
+        lines = split_lines(h["text"])
+        body = _numbered(lines[:SEARCH_PREVIEW_LINES], h["start_line"])
+        more = "\n      ..." if len(lines) > SEARCH_PREVIEW_LINES else ""
+        blocks.append(f"### {h['path']} (dòng {h['start_line']}-{h['end_line']})\n{body}{more}")
     return "\n\n".join(blocks)
 
 

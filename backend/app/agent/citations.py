@@ -9,19 +9,20 @@ import re
 import sqlite3
 from urllib.parse import quote
 
-# ví dụ khớp: [src/app.py:10-20] hoặc [README.md:5]
-_CITATION = re.compile(r"\[([\w./@+\-]+):(\d+)(?:-(\d+))?\]")
+# ví dụ khớp: [src/app.py:10-20], [README.md:5], và cả dạng gộp [src/app.py:24-28, 239]
+_CITATION = re.compile(r"\[([\w./@+\-]+):(\d+(?:-\d+)?(?:\s*,\s*\d+(?:-\d+)?)*)\]")
 MAX_CITATIONS = 30
 
 
 def extract_citations(answer: str) -> list[tuple[str, int, int]]:
     found: list[tuple[str, int, int]] = []
     for m in _CITATION.finditer(answer):
-        start = int(m[2])
-        end = int(m[3]) if m[3] else start
-        item = (m[1], min(start, end), max(start, end))
-        if item not in found:
-            found.append(item)
+        for part in m[2].split(","):
+            first, _, last = part.strip().partition("-")
+            start, end = int(first), int(last or first)
+            item = (m[1], min(start, end), max(start, end))
+            if item not in found:
+                found.append(item)
     return found[:MAX_CITATIONS]
 
 

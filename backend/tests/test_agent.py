@@ -163,6 +163,13 @@ def test_tach_trich_dan():
     assert extract_citations(text) == [("a/b.py", 10, 20), ("README.md", 5, 5), ("c.py", 3, 9)]
 
 
+def test_tach_trich_dan_dang_gop():
+    # Gemini thật hay viết gộp nhiều khoảng dòng của cùng một file như thế này
+    assert extract_citations("xem [src/signer.py:24-28, 239]") == [
+        ("src/signer.py", 24, 28), ("src/signer.py", 239, 239),
+    ]
+
+
 def test_trich_dan_mot_dong_co_link_dung(db):
     conn, repo_id = db
     items = check_citations(conn, repo_id, "[README.md:1]", {"README.md"})
