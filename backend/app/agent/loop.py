@@ -3,8 +3,8 @@
 Mỗi việc agent làm được phát ra thành một event, để giao diện vẽ được panel
 "Trace" theo thời gian thật và để sau này đo đạc, đánh giá.
 """
+import asyncio
 import logging
-import re
 import sqlite3
 import time
 from collections.abc import AsyncIterator
@@ -12,13 +12,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.agent.citations import check_citations
-from app.agent.tools import TOOLS, run_tool
+from app.agent.tools import TOOLS, ToolOutput, execute_tool
 from app.providers.base import LLMProvider, Message, ToolResult, Usage
 
 log = logging.getLogger("repolens.agent")
 
 MAX_STEPS = 6  # số lần hỏi model tối đa cho một câu hỏi
 MAX_CALLS_PER_STEP = 4  # số công cụ tối đa model được gọi trong một lần
+OLD_RESULT_CHARS = 500  # kết quả công cụ của các bước cũ chỉ giữ chừng này ký tự
 
 SYSTEM_PROMPT = """\
 Bạn là RepoLens, trợ lý giúp lập trình viên hiểu một codebase. Repo đang xem: {repo}.
@@ -46,14 +47,39 @@ LAST_STEP_NOTE = (
     "và nói rõ phần nào còn chưa chắc."
 )
 
-# dùng để nhận ra file nào đã xuất hiện trong kết quả công cụ
-_PATH_IN_OUTPUT = re.compile(r"^(?:### )?([\w./@+\-]+?)(?: \(|:\d+:)", re.MULTILINE)
-
 
 @dataclass
 class AgentEvent:
     type: str
     data: dict[str, Any] = field(default_factory=dict)
+
+
+def compact_old_results(messages: list[Message]) -> list[Message]:
+    """Rút gọn kết quả công cụ của các bước cũ trước khi gửi lại cho model.
+
+    Mỗi bước mình gửi lại toàn bộ hội thoại, nên nếu giữ nguyên mọi kết quả thì
+    số token tăng gần như theo cấp số nhân, rất nhanh chạm trần của gói miễn
+    phí. Model thường chỉ cần kết quả của bước gần nhất; những gì đã đọc ở các
+    bước trước, nó đã tóm tắt vào lời suy luận của chính nó.
+    """
+    last_tool = max((i for i, m in enumerate(messages) if m.role == "tool"), default=-1)
+    out = []
+    for i, m in enumerate(messages):
+        if m.role != "tool" or i == last_tool:
+            out.append(m)
+            continue
+        shortened = [
+            ToolResult(
+                r.call_id,
+                r.name,
+                r.content
+                if len(r.content) <= OLD_RESULT_CHARS
+                else r.content[:OLD_RESULT_CHARS] + "\n... (đã rút gọn, gọi lại công cụ nếu cần xem tiếp)",
+            )
+            for r in m.tool_results
+        ]
+        out.append(Message(role="tool", content=m.content, tool_results=shortened))
+    return out
 
 
 async def run_agent(
@@ -70,8 +96,9 @@ async def run_agent(
 
     total = Usage()
     tool_count = 0
-    seen_paths: set[str] = set()
+    read_paths: set[str] = set()
     answer = ""
+    ran_out = False
 
     for step in range(1, MAX_STEPS + 1):
         is_last = step == MAX_STEPS
@@ -79,7 +106,9 @@ async def run_agent(
         calls = []
 
         # Ở lượt cuối không đưa công cụ nữa, để model buộc phải trả lời.
-        async for ev in provider.stream(messages, system=system, tools=None if is_last else TOOLS):
+        async for ev in provider.stream(
+            compact_old_results(messages), system=system, tools=None if is_last else TOOLS
+        ):
             if ev.text:
                 text += ev.text
                 yield AgentEvent("token", {"step": step, "text": ev.text})
@@ -89,8 +118,12 @@ async def run_agent(
                 total.input_tokens += ev.usage.input_tokens
                 total.output_tokens += ev.usage.output_tokens
 
-        if not calls:
+        # Lượt cuối mà model vẫn đòi gọi công cụ thì bỏ qua yêu cầu đó: không còn
+        # lượt nào để nó đọc kết quả, nên chạy công cụ chỉ phí công và làm mất
+        # đoạn chữ nó đã viết.
+        if not calls or is_last:
             answer = text
+            ran_out = is_last and bool(calls)
             break
 
         # Model vừa viết vài chữ rồi mới gọi công cụ (kiểu "để mình tìm thử...").
@@ -109,22 +142,24 @@ async def run_agent(
             yield AgentEvent("tool_call", {"step": step, "id": call.id, "name": call.name, "args": call.args})
             t0 = time.perf_counter()
             try:
-                output = run_tool(conn, repo_id, call.name, call.args)
+                # Chạy ở thread riêng: grep trên repo lớn mất cả trăm mili giây,
+                # nếu chạy thẳng ở đây sẽ làm đứng mọi request khác của server.
+                out = await asyncio.to_thread(execute_tool, conn, repo_id, call.name, call.args)
             except Exception:
                 # tham số sai kiểu, v.v. Trả lỗi về cho model để nó tự sửa.
                 log.exception("Công cụ %s bị lỗi", call.name)
-                output = "Công cụ bị lỗi với tham số này, hãy thử tham số khác."
+                out = ToolOutput("Công cụ bị lỗi với tham số này, hãy thử tham số khác.")
             ms = round((time.perf_counter() - t0) * 1000, 1)
 
             tool_count += 1
-            seen_paths.update(_PATH_IN_OUTPUT.findall(output))
-            results.append(ToolResult(call.id, call.name, output))
+            read_paths |= out.paths
+            results.append(ToolResult(call.id, call.name, out.text))
             yield AgentEvent("tool_result", {
                 "step": step,
                 "id": call.id,
                 "ms": ms,
-                "chars": len(output),
-                "preview": output[:400],
+                "chars": len(out.text),
+                "preview": out.text[:400],
             })
 
         next_is_last = step + 1 == MAX_STEPS
@@ -132,10 +167,15 @@ async def run_agent(
             Message(role="tool", tool_results=results, content=LAST_STEP_NOTE if next_is_last else "")
         )
 
-    if not answer.strip():
-        yield AgentEvent("error", {"message": "Model không đưa ra được câu trả lời, bạn thử hỏi lại nhé."})
+    if answer.strip():
+        yield AgentEvent("citations", {"items": check_citations(conn, repo_id, answer, read_paths)})
+    elif ran_out:
+        yield AgentEvent("error", {
+            "message": "Mình đã tìm hết số lượt cho phép mà chưa ra câu trả lời. "
+            "Bạn thử hỏi cụ thể hơn, ví dụ nêu tên file hoặc hàm nhé."
+        })
     else:
-        yield AgentEvent("citations", {"items": check_citations(conn, repo_id, answer, seen_paths)})
+        yield AgentEvent("error", {"message": "Model không đưa ra được câu trả lời, bạn thử hỏi lại nhé."})
 
     yield AgentEvent("usage", {
         "input_tokens": total.input_tokens,

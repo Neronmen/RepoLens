@@ -173,5 +173,129 @@ def test_tach_trich_dan_dang_gop():
 def test_trich_dan_mot_dong_co_link_dung(db):
     conn, repo_id = db
     items = check_citations(conn, repo_id, "[README.md:1]", {"README.md"})
-    assert items[0]["url"].endswith("/README.md#L1")
+    # file markdown cần ?plain=1 thì GitHub mới nhảy đúng dòng
+    assert items[0]["url"].endswith("/README.md?plain=1#L1")
     assert items[0]["seen"] is True
+
+
+@pytest.mark.parametrize("text, mong_doi", [
+    ("[app/[id]/page.tsx:1]", [("app/[id]/page.tsx", 1, 1)]),
+    ("[app/(auth)/login.tsx:2-3]", [("app/(auth)/login.tsx", 2, 3)]),
+    ("[docs/my file.md:5]", [("docs/my file.md", 5, 5)]),
+    ("[routes/$id.tsx:7]", [("routes/$id.tsx", 7, 7)]),
+    ("[src/tiếng_việt.py:9]", [("src/tiếng_việt.py", 9, 9)]),
+    # nhiều file trong một cặp ngoặc
+    ("[src/auth.py:1-2, README.md:1]", [("src/auth.py", 1, 2), ("README.md", 1, 1)]),
+    ("[a.py:1-2; b.py:3]", [("a.py", 1, 2), ("b.py", 3, 3)]),
+    # các cách viết khác của cùng một ý
+    ("[src/auth.py:3–4]", [("src/auth.py", 3, 4)]),
+    ("[src/auth.py: 3-4]", [("src/auth.py", 3, 4)]),
+    ("[src/auth.py:L3-L4]", [("src/auth.py", 3, 4)]),
+    ("[`src/auth.py`:3]", [("src/auth.py", 3, 3)]),
+])
+def test_trich_dan_nhieu_cach_viet(text, mong_doi):
+    assert extract_citations(text) == mong_doi
+
+
+def test_khong_nhan_nham_cu_phap_thuong_thanh_trich_dan():
+    text = "dùng data[1:2] và s[i:10], lúc [10:30] và [localhost:8080] hay [x:1]"
+    assert extract_citations(text) == []
+
+
+def test_so_cuc_lon_khong_lam_hong_cuoi_stream():
+    # trên 4300 chữ số, int() của Python ném ValueError
+    assert extract_citations("[a.py:" + "9" * 5000 + "]") == []
+    assert extract_citations("[a.py:" + "9" * 30 + "]") == []
+
+
+def test_nhieu_trich_dan_van_nhanh_va_bi_cat_o_muc_toi_da():
+    import time
+
+    text = "".join(f"[a.py:{i}]" for i in range(50_000))
+    t = time.perf_counter()
+    kq = extract_citations(text)
+    assert len(kq) == 30
+    assert time.perf_counter() - t < 1
+
+
+def test_file_ten_la_duoc_danh_dau_hop_le():
+    conn = connect(":memory:")
+    s = index_repo(conn, "a", "b", tao_zip({"r/app/[id]/page.tsx": "a\nb\nc\n"}))
+    items = check_citations(conn, s.repo_id, "Xem [app/[id]/page.tsx:2-3].", {"app/[id]/page.tsx"})
+    assert items[0]["valid"] is True and items[0]["seen"] is True
+    assert "app/%5Bid%5D/page.tsx#L2-L3" in items[0]["url"]
+
+
+def test_chi_liet_ke_file_chua_tinh_la_da_doc(db):
+    # list_files chỉ cho thấy tên file, nên không được coi là agent đã đọc
+    provider = ProviderKichBan([[goi("list_files")], [chu("Có file [src/auth.py:3].")]])
+    items = chay(provider, db)[-2].data["items"]
+    assert items[0]["valid"] is True and items[0]["seen"] is False
+
+
+def test_luot_cuoi_van_goi_cong_cu_thi_giu_lai_chu_da_viet(db, monkeypatch):
+    monkeypatch.setattr(loop, "MAX_STEPS", 2)
+    provider = ProviderKichBan([
+        [goi("list_files")],
+        [chu("Câu trả lời một phần [src/auth.py:3]. "), goi("read_file", path="src/auth.py")],
+    ])
+    events = chay(provider, db)
+    # không chạy công cụ vô ích, không báo lỗi, và chữ đã viết không bị coi là lời dẫn
+    assert loai(events).count("tool_call") == 1
+    assert "preamble" not in loai(events) and "error" not in loai(events)
+    assert "citations" in loai(events)
+
+
+def test_luot_cuoi_goi_cong_cu_ma_khong_co_chu_thi_bao_het_luot(db, monkeypatch):
+    monkeypatch.setattr(loop, "MAX_STEPS", 2)
+    provider = ProviderKichBan([[goi("list_files")], [goi("list_files")]])
+    events = chay(provider, db)
+    loi = [e for e in events if e.type == "error"]
+    assert len(loi) == 1 and "hết số lượt" in loi[0].data["message"]
+
+
+def test_ket_qua_cua_buoc_cu_duoc_rut_gon(db, monkeypatch):
+    monkeypatch.setattr(loop, "OLD_RESULT_CHARS", 50)
+    provider = ProviderKichBan([
+        [goi("grep", text="def")],
+        [goi("list_files")],
+        [chu("xong")],
+    ])
+    chay(provider, db)
+    luot_ba = provider.da_nhan[2]["messages"]
+    cu, moi = [m for m in luot_ba if m.role == "tool"]
+    assert "đã rút gọn" in cu.tool_results[0].content or len(cu.tool_results[0].content) <= 50
+    assert "đã rút gọn" not in moi.tool_results[0].content
+    # câu hỏi, (gọi + kết quả) của bước 1, rồi (gọi + kết quả) của bước 2
+    assert [m.role for m in luot_ba] == ["user", "assistant", "tool", "assistant", "tool"]
+
+
+def test_agent_khong_chan_event_loop_khi_chay_cong_cu(db, monkeypatch):
+    import time
+
+    from app.agent import loop as lp
+    from app.agent.tools import ToolOutput
+
+    def cong_cu_cham(conn, repo_id, name, args):
+        time.sleep(0.4)
+        return ToolOutput("xong")
+
+    monkeypatch.setattr(lp, "execute_tool", cong_cu_cham)
+    conn, repo_id = db
+    provider = ProviderKichBan([[goi("grep", text="x")], [chu("ok")]])
+
+    async def thu():
+        nhip = []
+
+        async def dong_ho():
+            while True:
+                nhip.append(time.perf_counter())
+                await asyncio.sleep(0.02)
+
+        t = asyncio.create_task(dong_ho())
+        _ = [ev async for ev in run_agent(provider, conn, repo_id, "a/b", "hỏi")]
+        t.cancel()
+        return max(b - a for a, b in zip(nhip, nhip[1:]))
+
+    # nếu công cụ chạy thẳng trong event loop thì sẽ có một khoảng đứng ~0.4s
+    assert asyncio.run(thu()) < 0.2
