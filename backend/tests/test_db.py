@@ -37,6 +37,13 @@ def test_ky_tu_la_khong_lam_vo_truy_van(conn):
         search_chunks(conn, 1, q)
 
 
+def test_tieng_viet_khong_bi_xe_thanh_manh(conn):
+    assert build_match_query("xác thực người dùng") == '"xác" OR "thực" OR "người" OR "dùng"'
+    # "chao" trong code khớp được với "chào" vì FTS5 tự bỏ dấu khi so sánh
+    kq = search_chunks(conn, 1, "trang chào")
+    assert kq and kq[0]["id"] == 2
+
+
 def test_cau_hoi_toan_stopword_tra_ve_rong(conn):
     assert search_chunks(conn, 1, "how does the") == []
 

@@ -52,7 +52,8 @@ def connect(path: Path | str) -> sqlite3.Connection:
     if str(path) != ":memory:":
         Path(path).parent.mkdir(parents=True, exist_ok=True)
     # FastAPI chạy endpoint sync trong threadpool nên cần cho phép khác thread
-    conn = sqlite3.connect(path, check_same_thread=False)
+    # timeout: nếu đang có request khác ghi thì chờ tối đa 30 giây thay vì báo lỗi ngay
+    conn = sqlite3.connect(path, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
@@ -70,7 +71,9 @@ def get_db() -> Iterator[sqlite3.Connection]:
 
 # --- tìm kiếm -------------------------------------------------------------
 
-_WORD = re.compile(r"[A-Za-z0-9_]+")
+# \w nhận cả chữ có dấu. Nếu chỉ lấy a-z thì "xác thực" bị xé thành "x", "c",
+# "th", "c" và tìm ra toàn kết quả rác. \w không chứa dấu nháy nên vẫn an toàn.
+_WORD = re.compile(r"\w+")
 _CAMEL = re.compile(r"[A-Z]+(?=[A-Z][a-z])|[A-Z]?[a-z]+|[A-Z]+|[0-9]+")
 _STOPWORDS = {"the", "a", "an", "is", "of", "to", "in", "and", "or", "how", "what", "does", "do"}
 
@@ -84,7 +87,9 @@ def build_match_query(question: str, max_terms: int = 12) -> str:
     """
     terms: list[str] = []
     for word in _WORD.findall(question):
-        pieces = [word] + [p for p in _CAMEL.findall(word) if p.lower() != word.lower()]
+        pieces = [word]
+        if word.isascii():  # tách camelCase chỉ có nghĩa với tên biến, tên hàm
+            pieces += [p for p in _CAMEL.findall(word) if p.lower() != word.lower()]
         for piece in pieces:
             low = piece.lower()
             if len(low) > 1 and low not in _STOPWORDS and low not in terms:
