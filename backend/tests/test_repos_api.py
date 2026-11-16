@@ -61,6 +61,38 @@ def test_repo_khong_ton_tai_tra_400(client):
     assert res.status_code == 400
 
 
+def test_dang_ban_lap_chi_muc_thi_tra_429(client):
+    from app.repos import _ingest_slot
+
+    _ingest_slot.acquire()  # giả vờ đang có một repo khác được xử lý
+    try:
+        res = client.post("/api/repos", json={"url": "a/b"})
+    finally:
+        _ingest_slot.release()
+    assert res.status_code == 429
+    # xong việc thì phải nhận request mới bình thường
+    assert client.post("/api/repos", json={"url": "a/b"}).status_code == 201
+
+
+def test_loi_khi_lap_chi_muc_khong_lam_ket_server(client):
+    def tai_loi(owner, name):
+        raise RepoError("lỗi tải")
+
+    app.dependency_overrides[get_downloader] = lambda: tai_loi
+    assert client.post("/api/repos", json={"url": "a/b"}).status_code == 400
+    # lần sau vẫn phải vào được, tức là chỗ giữ lượt đã được trả lại
+    app.dependency_overrides[get_downloader] = lambda: (lambda owner, name: ZIP_MAU)
+    assert client.post("/api/repos", json={"url": "a/b"}).status_code == 201
+
+
+def test_chi_giu_cac_repo_moi_nhat(client, monkeypatch):
+    monkeypatch.setattr("app.ingest.service.MAX_REPOS", 2)
+    for ten in ["a/mot", "a/hai", "a/ba"]:
+        assert client.post("/api/repos", json={"url": ten}).status_code == 201
+    ten_con_lai = {r["name"] for r in client.get("/api/repos").json()}
+    assert ten_con_lai == {"hai", "ba"}
+
+
 def test_repo_chua_them_tra_404(client):
     assert client.get("/api/repos/999/search", params={"q": "x"}).status_code == 404
     assert client.get("/api/repos/999/files").status_code == 404

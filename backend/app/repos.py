@@ -1,5 +1,7 @@
 """Các endpoint làm việc với repo: thêm repo, xem danh sách, tìm trong code."""
+import logging
 import sqlite3
+import threading
 from collections.abc import Callable
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -9,7 +11,10 @@ from app.db import get_db, search_chunks
 from app.ingest.github import RepoError, download_zip, parse_repo_url
 from app.ingest.service import index_repo
 
+log = logging.getLogger("repolens.repos")
 router = APIRouter(prefix="/api/repos")
+
+_ingest_slot = threading.BoundedSemaphore(1)
 
 Downloader = Callable[[str, str], bytes]
 
@@ -40,9 +45,27 @@ def add_repo(
 ):
     try:
         owner, name = parse_repo_url(req.url)
+    except RepoError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    # Mỗi lần lập chỉ mục có thể giữ cả trăm MB trong RAM (file zip + nội dung
+    # đã giải nén). Server free chỉ có khoảng 512MB nên chỉ cho chạy từng cái một.
+    if not _ingest_slot.acquire(blocking=False):
+        raise HTTPException(
+            status_code=429,
+            detail="Server đang lập chỉ mục một repo khác, đợi chút rồi thử lại nhé.",
+            headers={"Retry-After": "15"},
+        )
+    try:
         stats = index_repo(conn, owner, name, download(owner, name))
     except RepoError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except sqlite3.OperationalError as e:
+        # thường là "database is locked" khi có tiến trình khác đang ghi
+        log.warning("Không ghi được database: %s", e)
+        raise HTTPException(status_code=503, detail="Server đang bận, thử lại sau nhé.") from e
+    finally:
+        _ingest_slot.release()
     return {
         "id": stats.repo_id,
         "owner": owner,
