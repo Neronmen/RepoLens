@@ -15,10 +15,15 @@ from app.agent.loop import run_agent
 from app.config import get_settings
 from app.db import connect
 from app.providers import build_provider
-from app.providers.base import LLMProvider, Message, RateLimited
+from app.providers.base import LLMProvider, Message, ModelOverloaded, RateLimited
 
 log = logging.getLogger("repolens.ask")
 router = APIRouter(prefix="/api")
+
+# Lịch sử do trình duyệt gửi lên nên không thể tin: ai cũng có thể bịa ra. Giới
+# hạn tổng độ dài để không ai nhét cả cuốn sách vào, vì mỗi bước của agent đều
+# gửi lại toàn bộ lịch sử cho model.
+HISTORY_BUDGET_CHARS = 12_000
 
 
 class HistoryItem(BaseModel):
@@ -34,17 +39,44 @@ class AskRequest(BaseModel):
 
 
 @lru_cache
-def get_provider() -> LLMProvider:
+def _build_provider() -> LLMProvider:
     return build_provider(get_settings())
+
+
+def get_provider() -> LLMProvider:
+    try:
+        return _build_provider()
+    except ValueError as e:
+        # thiếu GEMINI_API_KEY: báo cho người dùng biết server chưa sẵn sàng
+        # thay vì để lộ ra thành lỗi 500 trống trơn
+        log.error("Không tạo được provider: %s", e)
+        raise HTTPException(status_code=503, detail="Server chưa được cấu hình khóa API cho model.") from e
 
 
 def get_db_path() -> Path:
     return get_settings().db_path
 
 
-def sse(event: str, data: dict) -> str:
-    # ensure_ascii=False để tiếng Việt đi qua nguyên vẹn
-    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+def clean_history(items: list[HistoryItem]) -> list[Message]:
+    """Giữ những lượt gần nhất trong ngân sách ký tự, và luôn bắt đầu bằng lượt của người dùng."""
+    kept: list[HistoryItem] = []
+    used = 0
+    for item in reversed(items):
+        used += len(item.content)
+        if used > HISTORY_BUDGET_CHARS:
+            break
+        kept.append(item)
+    kept.reverse()
+    while kept and kept[0].role != "user":
+        kept.pop(0)
+    return [Message(role=h.role, content=h.content) for h in kept]
+
+
+def sse(event: str, data: dict) -> bytes:
+    text = f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+    # errors="replace": model đôi khi sinh ra ký tự Unicode hỏng (surrogate lẻ).
+    # Nếu để encode báo lỗi thì cả stream đứt giữa chừng mà client không biết vì sao.
+    return text.encode("utf-8", errors="replace")
 
 
 async def _stream(
@@ -52,14 +84,17 @@ async def _stream(
     conn: sqlite3.Connection,
     repo: sqlite3.Row,
     req: AskRequest,
-) -> AsyncIterator[str]:
-    history = [Message(role=h.role, content=h.content) for h in req.history]
+) -> AsyncIterator[bytes]:
     label = f"{repo['owner']}/{repo['name']}"
     try:
-        async for ev in run_agent(provider, conn, repo["id"], label, req.question, history):
+        async for ev in run_agent(
+            provider, conn, repo["id"], label, req.question, clean_history(req.history)
+        ):
             yield sse(ev.type, ev.data)
     except RateLimited:
-        yield sse("error", {"message": "Model đang quá tải (hết lượt miễn phí trong phút này), đợi một chút rồi hỏi lại nhé."})
+        yield sse("error", {"message": "Model đang quá tải hoặc đã hết lượt miễn phí, đợi một chút rồi hỏi lại nhé."})
+    except ModelOverloaded:
+        yield sse("error", {"message": "Model đang bận, thử lại sau ít phút nhé."})
     except Exception:
         # log chi tiết ở server, chỉ nói chung chung cho client
         log.exception("Lỗi khi chạy agent")
@@ -79,7 +114,11 @@ async def ask(
     db_path: Path = Depends(get_db_path),
 ):
     conn = connect(db_path)
-    repo = conn.execute("SELECT id, owner, name FROM repos WHERE id = ?", (repo_id,)).fetchone()
+    try:
+        repo = conn.execute("SELECT id, owner, name FROM repos WHERE id = ?", (repo_id,)).fetchone()
+    except Exception:
+        conn.close()
+        raise
     if repo is None:
         conn.close()
         raise HTTPException(status_code=404, detail="Chưa có repo này, hãy thêm nó trước.")
