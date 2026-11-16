@@ -12,6 +12,10 @@ class RateLimited(Exception):
     """Nhà cung cấp báo đã hết lượt gọi (HTTP 429). Tách riêng để báo cho người dùng dễ hiểu."""
 
 
+class ModelOverloaded(Exception):
+    """Nhà cung cấp báo đang quá tải (HTTP 503), thường chỉ thoáng qua."""
+
+
 @dataclass
 class ToolSpec:
     """Mô tả một công cụ để model biết khi nào gọi và truyền tham số gì."""

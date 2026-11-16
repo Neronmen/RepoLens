@@ -1,10 +1,29 @@
+import asyncio
+import logging
 import uuid
 from collections.abc import AsyncIterator
 
 from google import genai
 from google.genai import errors, types
 
-from app.providers.base import Message, RateLimited, StreamEvent, ToolCall, ToolSpec, Usage
+from app.providers.base import (
+    Message,
+    ModelOverloaded,
+    RateLimited,
+    StreamEvent,
+    ToolCall,
+    ToolSpec,
+    Usage,
+)
+
+log = logging.getLogger("repolens.gemini")
+
+TIMEOUT_MS = 60_000
+# gồm cả token "suy nghĩ" của model, nên để rộng kẻo câu trả lời bị cắt ngang
+MAX_OUTPUT_TOKENS = 8192
+# Gói miễn phí hay báo 429/503 thoáng qua. Thử lại vài lần, nhưng chỉ khi
+# chưa có chữ nào được gửi đi, không thì người dùng sẽ thấy câu trả lời bị lặp.
+RETRY_DELAYS = (1.0, 3.0)
 
 
 def _to_contents(messages: list[Message]) -> list[types.Content]:
@@ -47,7 +66,9 @@ class GeminiProvider:
     def __init__(self, api_key: str, model: str):
         if not api_key:
             raise ValueError("Chưa có GEMINI_API_KEY, hãy điền vào file .env")
-        self._client = genai.Client(api_key=api_key)
+        self._client = genai.Client(
+            api_key=api_key, http_options=types.HttpOptions(timeout=TIMEOUT_MS)
+        )
         self._model = model
 
     async def stream(
@@ -56,7 +77,9 @@ class GeminiProvider:
         system: str = "",
         tools: list[ToolSpec] | None = None,
     ) -> AsyncIterator[StreamEvent]:
-        config = types.GenerateContentConfig(system_instruction=system or None)
+        config = types.GenerateContentConfig(
+            system_instruction=system or None, max_output_tokens=MAX_OUTPUT_TOKENS
+        )
         if tools:
             config.tools = [
                 types.Tool(
@@ -73,13 +96,24 @@ class GeminiProvider:
             # mình tự chạy công cụ và tự quyết định vòng lặp, không để SDK làm hộ
             config.automatic_function_calling = types.AutomaticFunctionCallingConfig(disable=True)
 
-        try:
-            async for ev in self._events(messages, config):
-                yield ev
-        except errors.APIError as e:
-            if e.code == 429:
-                raise RateLimited() from e
-            raise
+        for attempt in range(len(RETRY_DELAYS) + 1):
+            started = False
+            try:
+                async for ev in self._events(messages, config):
+                    started = True
+                    yield ev
+                return
+            except errors.APIError as e:
+                retryable = e.code in (429, 503)
+                if retryable and not started and attempt < len(RETRY_DELAYS):
+                    log.warning("Gemini báo %s, thử lại sau %ss", e.code, RETRY_DELAYS[attempt])
+                    await asyncio.sleep(RETRY_DELAYS[attempt])
+                    continue
+                if e.code == 429:
+                    raise RateLimited() from e
+                if e.code == 503:
+                    raise ModelOverloaded() from e
+                raise
 
     async def _events(
         self, messages: list[Message], config: types.GenerateContentConfig
@@ -92,20 +126,27 @@ class GeminiProvider:
             # Duyệt từng part thay vì dùng chunk.text, vì một chunk có thể chứa
             # cả chữ lẫn yêu cầu gọi công cụ.
             candidates = chunk.candidates or []
-            content = candidates[0].content if candidates else None
+            candidate = candidates[0] if candidates else None
+            content = candidate.content if candidate else None
             for part in (content.parts if content and content.parts else []):
-                if part.function_call:
-                    fc = part.function_call
+                if part.text and not part.thought:
+                    yield StreamEvent(text=part.text)
+                fc = part.function_call
+                if fc and fc.name:  # tên rỗng thì gửi lại lượt sau cũng chỉ bị Gemini từ chối
                     yield StreamEvent(
                         tool_call=ToolCall(
                             id=fc.id or uuid.uuid4().hex[:12],
-                            name=fc.name or "",
+                            name=fc.name,
                             args=dict(fc.args or {}),
                             signature=part.thought_signature,
                         )
                     )
-                elif part.text and not part.thought:
-                    yield StreamEvent(text=part.text)
+
+            # Lý do dừng bất thường (hết token, bị chặn vì an toàn...) là manh mối
+            # quan trọng khi người dùng báo "không có câu trả lời".
+            reason = getattr(getattr(candidate, "finish_reason", None), "name", None)
+            if reason and reason not in ("STOP", "FINISH_REASON_UNSPECIFIED"):
+                log.warning("Gemini dừng với lý do bất thường: %s", reason)
 
             # token chỉ có đầy đủ ở chunk cuối, nên cứ ghi đè dần
             meta = chunk.usage_metadata
