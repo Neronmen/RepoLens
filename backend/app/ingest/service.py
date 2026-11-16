@@ -5,7 +5,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
-from app.ingest.chunker import chunk_text
+from app.ingest.chunker import chunk_text, split_lines
 from app.ingest.github import RepoError
 
 MAX_FILE_BYTES = 200 * 1024
@@ -134,7 +134,7 @@ def index_repo(conn: sqlite3.Connection, owner: str, name: str, zip_bytes: bytes
         for path, language, text in files:
             file_id = conn.execute(
                 "INSERT INTO files (repo_id, path, language, line_count) VALUES (?, ?, ?, ?)",
-                (repo_id, path, language, text.count("\n") + 1),
+                (repo_id, path, language, len(split_lines(text))),
             ).lastrowid
             for ch in chunk_text(text):
                 chunk_id = conn.execute(

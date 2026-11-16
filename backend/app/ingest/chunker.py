@@ -9,6 +9,7 @@ from dataclasses import dataclass
 MAX_LINES = 60
 OVERLAP = 8
 MAX_CHARS = 3500
+MAX_LINE_CHARS = 500
 
 
 @dataclass
@@ -18,8 +19,27 @@ class Chunk:
     text: str
 
 
+def split_lines(text: str) -> list[str]:
+    """Tách dòng giống cách GitHub và editor đếm.
+
+    Không dùng `str.splitlines()` vì nó còn tách ở mấy ký tự lạ như form feed,
+    làm số dòng trong trích dẫn bị lệch so với khi mở file trên GitHub.
+    """
+    lines = [line.removesuffix("\r") for line in text.split("\n")]
+    if lines and lines[-1] == "":
+        lines.pop()  # file kết thúc bằng xuống dòng thì không tính thêm một dòng rỗng
+    return lines
+
+
+def _shorten(line: str) -> str:
+    # dòng dài bất thường (json một dòng, code bundle) thì chỉ giữ phần đầu
+    if len(line) <= MAX_LINE_CHARS:
+        return line
+    return line[:MAX_LINE_CHARS] + " …"
+
+
 def chunk_text(text: str, max_lines: int = MAX_LINES, overlap: int = OVERLAP) -> list[Chunk]:
-    lines = text.splitlines()
+    lines = [_shorten(line) for line in split_lines(text)]
     n = len(lines)
     chunks: list[Chunk] = []
     start = 0
@@ -35,7 +55,7 @@ def chunk_text(text: str, max_lines: int = MAX_LINES, overlap: int = OVERLAP) ->
                     end = i + 1
                     break
 
-        # giới hạn số ký tự để một đoạn không phình to vì dòng quá dài
+        # giới hạn số ký tự để một đoạn không phình to vì nhiều dòng dài
         size = 0
         for i in range(start, end):
             size += len(lines[i]) + 1
@@ -49,7 +69,9 @@ def chunk_text(text: str, max_lines: int = MAX_LINES, overlap: int = OVERLAP) ->
 
         if end >= n:
             break
-        # chồng lên vài dòng, nhưng luôn phải tiến về phía trước
-        start = max(end - overlap, start + 1)
+        # Chồng lên tối đa 1/4 đoạn vừa cắt. Nếu để cố định 8 dòng thì với đoạn
+        # ngắn (toàn dòng dài) mỗi dòng sẽ bị lặp lại trong rất nhiều đoạn.
+        step_back = min(overlap, (end - start) // 4)
+        start = max(end - step_back, start + 1)
 
     return chunks
