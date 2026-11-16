@@ -1,0 +1,53 @@
+.page {
+  min-height: 100vh;
+  padding: 20px 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 520px;
+  margin: 0 auto;
+  padding-bottom: 80px;
+}
+
+.code {
+  margin: 0 0 20px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.body h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(36px, 7vw, 56px);
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+}
+
+.hint {
+  margin: 20px 0 0;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.back {
+  margin-top: 32px;
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--accent);
+  padding: 12px 0;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
