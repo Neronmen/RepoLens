@@ -37,6 +37,27 @@ def test_ky_tu_la_khong_lam_vo_truy_van(conn):
         search_chunks(conn, 1, q)
 
 
+def test_nhieu_luong_cung_mo_database_moi(tmp_path):
+    # trước đây việc bật WAL ở mỗi kết nối làm chỗ này báo "database is locked"
+    import threading
+
+    duong_dan = tmp_path / "moi.sqlite"
+    loi = []
+
+    def mo():
+        try:
+            connect(duong_dan).close()
+        except Exception as e:  # noqa: BLE001
+            loi.append(e)
+
+    cac_luong = [threading.Thread(target=mo) for _ in range(8)]
+    for t in cac_luong:
+        t.start()
+    for t in cac_luong:
+        t.join()
+    assert loi == []
+
+
 def test_tieng_viet_khong_bi_xe_thanh_manh(conn):
     assert build_match_query("xác thực người dùng") == '"xác" OR "thực" OR "người" OR "dùng"'
     # "chao" trong code khớp được với "chào" vì FTS5 tự bỏ dấu khi so sánh

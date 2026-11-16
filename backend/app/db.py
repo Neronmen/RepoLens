@@ -5,6 +5,7 @@ và FTS5 có sẵn bm25 để xếp hạng kết quả nên chưa cần đến v
 """
 import re
 import sqlite3
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -48,6 +49,10 @@ CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(text, path);
 """
 
 
+_init_lock = threading.Lock()
+_initialized: set[str] = set()
+
+
 def connect(path: Path | str) -> sqlite3.Connection:
     if str(path) != ":memory:":
         Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -55,9 +60,17 @@ def connect(path: Path | str) -> sqlite3.Connection:
     # timeout: nếu đang có request khác ghi thì chờ tối đa 30 giây thay vì báo lỗi ngay
     conn = sqlite3.connect(path, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")
-    conn.executescript(SCHEMA)
+    conn.execute("PRAGMA foreign_keys = ON")  # cái này phải bật lại cho từng kết nối
+
+    # Bật WAL và tạo bảng chỉ cần làm một lần cho mỗi file database. Làm ở mọi
+    # request vừa thừa, vừa dễ dính "database is locked" khi nhiều request cùng
+    # mở một database mới tinh. Database trong bộ nhớ thì mỗi kết nối là một cái riêng.
+    key = str(path)
+    with _init_lock:
+        if key == ":memory:" or key not in _initialized:
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.executescript(SCHEMA)
+            _initialized.add(key)
     return conn
 
 
