@@ -8,8 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.db import get_db, search_chunks
+from app.ingest.chunker import split_lines
 from app.ingest.github import RepoError, download_zip, parse_repo_url
 from app.ingest.service import index_repo
+
+MAX_FILE_WINDOW = 400
 
 log = logging.getLogger("repolens.repos")
 router = APIRouter(prefix="/api/repos")
@@ -83,6 +86,46 @@ def list_repos(conn: sqlite3.Connection = Depends(get_db)):
         " FROM repos ORDER BY indexed_at DESC LIMIT 100"
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+@router.get("/{repo_id}")
+def get_repo(repo_id: int, conn: sqlite3.Connection = Depends(get_db)):
+    # để trang hỏi đáp tải lại được mà không cần nhớ thông tin repo ở trình duyệt
+    row = _require_repo(conn, repo_id)
+    return {k: row[k] for k in ("id", "owner", "name", "indexed_at", "file_count", "chunk_count")}
+
+
+@router.get("/{repo_id}/file")
+def read_file(
+    repo_id: int,
+    path: str = Query(min_length=1, max_length=500),
+    start: int = Query(default=1, ge=1),
+    end: int | None = Query(default=None, ge=1),
+    conn: sqlite3.Connection = Depends(get_db),
+):
+    """Trả về một khoảng dòng của file, cho khung xem code ở giao diện."""
+    _require_repo(conn, repo_id)
+    row = conn.execute(
+        "SELECT path, language, content FROM files WHERE repo_id = ? AND path = ?",
+        (repo_id, path),
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Không có file này trong repo.")
+
+    lines = split_lines(row["content"])
+    if start > len(lines):
+        raise HTTPException(status_code=416, detail=f"File chỉ có {len(lines)} dòng.")
+    # giới hạn số dòng mỗi lần để một request không kéo về cả file khổng lồ
+    last = min(end or start + MAX_FILE_WINDOW - 1, start + MAX_FILE_WINDOW - 1, len(lines))
+    last = max(last, start)
+    return {
+        "path": row["path"],
+        "language": row["language"],
+        "line_count": len(lines),
+        "start_line": start,
+        "end_line": last,
+        "lines": lines[start - 1:last],
+    }
 
 
 @router.get("/{repo_id}/files")

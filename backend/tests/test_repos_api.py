@@ -46,6 +46,47 @@ def test_liet_ke_file(client):
     assert [f["path"] for f in files] == ["README.md", "auth.py"]
 
 
+def test_xem_thong_tin_mot_repo(client):
+    repo_id = client.post("/api/repos", json={"url": "a/b"}).json()["id"]
+    info = client.get(f"/api/repos/{repo_id}").json()
+    assert (info["owner"], info["name"], info["file_count"]) == ("a", "b", 2)
+    assert client.get("/api/repos/999").status_code == 404
+
+
+def test_doc_mot_khoang_dong_cua_file(client):
+    repo_id = client.post("/api/repos", json={"url": "a/b"}).json()["id"]
+    res = client.get(f"/api/repos/{repo_id}/file", params={"path": "auth.py", "start": 2, "end": 2})
+    assert res.json() == {
+        "path": "auth.py", "language": "python", "line_count": 2,
+        "start_line": 2, "end_line": 2, "lines": ["    return name"],
+    }
+
+
+def test_doc_file_mac_dinh_tu_dong_dau_va_bi_cat_o_muc_toi_da(client, monkeypatch):
+    monkeypatch.setattr("app.repos.MAX_FILE_WINDOW", 3)
+    from app.repos import get_downloader as _  # noqa: F401  (đảm bảo module đã nạp)
+
+    dai = tao_zip({"r/dai.py": "\n".join(f"dong {i}" for i in range(1, 11))})
+    app.dependency_overrides[get_downloader] = lambda: (lambda owner, name: dai)
+    repo_id = client.post("/api/repos", json={"url": "a/dai"}).json()["id"]
+    res = client.get(f"/api/repos/{repo_id}/file", params={"path": "dai.py"}).json()
+    assert res["lines"] == ["dong 1", "dong 2", "dong 3"] and res["line_count"] == 10
+    res = client.get(f"/api/repos/{repo_id}/file", params={"path": "dai.py", "start": 9, "end": 5000}).json()
+    assert res["lines"] == ["dong 9", "dong 10"] and res["end_line"] == 10
+
+
+def test_doc_file_loi_dau_vao(client):
+    repo_id = client.post("/api/repos", json={"url": "a/b"}).json()["id"]
+    doc = lambda **p: client.get(f"/api/repos/{repo_id}/file", params=p)  # noqa: E731
+    assert doc(path="khong/co.py").status_code == 404
+    assert doc(path="../../etc/passwd").status_code == 404
+    assert doc(path="auth.py", start=999).status_code == 416
+    assert doc(path="auth.py", start=0).status_code == 422
+    assert doc().status_code == 422
+    # repo khác không đọc được: repo_id là của repo kia
+    assert client.get("/api/repos/999/file", params={"path": "auth.py"}).status_code == 404
+
+
 def test_link_sai_tra_400(client):
     res = client.post("/api/repos", json={"url": "https://gitlab.com/a/b"})
     assert res.status_code == 400
