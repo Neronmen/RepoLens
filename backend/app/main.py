@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.chat import router as chat_router
+from app.ask import router as ask_router
 from app.config import get_settings
 from app.repos import router as repos_router
 
@@ -17,7 +17,7 @@ app.add_middleware(
 )
 
 
-app.include_router(chat_router)
+app.include_router(ask_router)
 app.include_router(repos_router)
 
 

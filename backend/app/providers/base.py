@@ -8,6 +8,10 @@ from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
 
+class RateLimited(Exception):
+    """Nhà cung cấp báo đã hết lượt gọi (HTTP 429). Tách riêng để báo cho người dùng dễ hiểu."""
+
+
 @dataclass
 class ToolSpec:
     """Mô tả một công cụ để model biết khi nào gọi và truyền tham số gì."""

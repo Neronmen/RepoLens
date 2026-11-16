@@ -2,9 +2,9 @@ import uuid
 from collections.abc import AsyncIterator
 
 from google import genai
-from google.genai import types
+from google.genai import errors, types
 
-from app.providers.base import Message, StreamEvent, ToolCall, ToolSpec, Usage
+from app.providers.base import Message, RateLimited, StreamEvent, ToolCall, ToolSpec, Usage
 
 
 def _to_contents(messages: list[Message]) -> list[types.Content]:
@@ -73,6 +73,17 @@ class GeminiProvider:
             # mình tự chạy công cụ và tự quyết định vòng lặp, không để SDK làm hộ
             config.automatic_function_calling = types.AutomaticFunctionCallingConfig(disable=True)
 
+        try:
+            async for ev in self._events(messages, config):
+                yield ev
+        except errors.APIError as e:
+            if e.code == 429:
+                raise RateLimited() from e
+            raise
+
+    async def _events(
+        self, messages: list[Message], config: types.GenerateContentConfig
+    ) -> AsyncIterator[StreamEvent]:
         usage = Usage()
         response = await self._client.aio.models.generate_content_stream(
             model=self._model, contents=_to_contents(messages), config=config
