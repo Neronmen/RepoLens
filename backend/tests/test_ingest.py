@@ -69,6 +69,33 @@ def test_bo_file_qua_lon():
     assert [f[0] for f in files] == ["small.py"]
 
 
+def test_zip_qua_nhieu_file_bi_tu_choi():
+    z = tao_zip({f"r/f{i}.py": "x" for i in range(20_050)})
+    with pytest.raises(RepoError, match="quá nhiều file"):
+        read_source_files(z)
+
+
+def test_file_rac_van_bi_tinh_vao_ngan_sach_giai_nen(monkeypatch):
+    # file có byte 0 sẽ bị bỏ, nhưng công giải nén nó vẫn phải được đếm
+    monkeypatch.setattr("app.ingest.service.MAX_UNPACKED_BYTES", 250_000)
+    z = tao_zip({f"r/rac{i}.json": b"\x00" * 100_000 for i in range(5)})
+    with pytest.raises(RepoError, match="lớn quá"):
+        read_source_files(z)
+
+
+def test_hai_file_trung_duong_dan_chi_lay_mot():
+    # hai thư mục gốc khác nhau nhưng sau khi bỏ gốc thì trùng đường dẫn
+    z = tao_zip({"goc1/a.py": "x = 1", "goc2/a.py": "x = 2"})
+    files, skipped = read_source_files(z)
+    assert [f[0] for f in files] == ["a.py"]
+    assert skipped == 1
+
+
+def test_link_viet_hoa_va_duoi_git_duoc_chuan_hoa():
+    assert parse_repo_url("Pallets/Flask.git") == ("pallets", "flask")
+    assert parse_repo_url("https://github.com/Pallets/Flask") == ("pallets", "flask")
+
+
 def test_zip_hong_bao_loi_de_hieu():
     with pytest.raises(RepoError):
         read_source_files(b"day khong phai zip")

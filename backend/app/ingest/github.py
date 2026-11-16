@@ -16,7 +16,9 @@ _URL = re.compile(
     r"(?P<owner>[A-Za-z0-9][A-Za-z0-9-]{0,38})/"
     r"(?P<name>[A-Za-z0-9._-]{1,100}?)(?:\.git)?/?$"
 )
-_SHORT = re.compile(r"^(?P<owner>[A-Za-z0-9][A-Za-z0-9-]{0,38})/(?P<name>[A-Za-z0-9._-]{1,100})$")
+_SHORT = re.compile(
+    r"^(?P<owner>[A-Za-z0-9][A-Za-z0-9-]{0,38})/(?P<name>[A-Za-z0-9._-]{1,100}?)(?:\.git)?$"
+)
 
 
 class RepoError(Exception):
@@ -28,7 +30,9 @@ def parse_repo_url(url: str) -> tuple[str, str]:
     m = _URL.match(url) or _SHORT.match(url)
     if not m or m["name"] in {".", ".."}:
         raise RepoError("Link không hợp lệ. Ví dụ đúng: https://github.com/pallets/flask")
-    return m["owner"], m["name"]
+    # GitHub không phân biệt hoa thường, nên đưa về chữ thường để
+    # Pallets/Flask và pallets/flask không thành hai bản lưu riêng
+    return m["owner"].lower(), m["name"].lower()
 
 
 def download_zip(owner: str, name: str) -> bytes:
