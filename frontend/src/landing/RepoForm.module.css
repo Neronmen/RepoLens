@@ -1,0 +1,123 @@
+.wrap {
+  margin-top: 40px;
+  max-width: 600px;
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.field {
+  flex: 1 1 280px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 54px;
+  padding: 0 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+}
+
+.field:focus-within {
+  border-color: var(--accent);
+}
+
+.invalid {
+  border-color: var(--danger);
+}
+
+.prefix {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--faint);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  outline: 0; /* viền của .field đã đổi màu khi focus */
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.submit {
+  height: 54px;
+  padding: 0 26px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  transition: filter 0.15s;
+}
+
+.submit:hover {
+  filter: brightness(1.08);
+}
+
+.error {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--danger);
+}
+
+.chips {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+.chip {
+  min-height: 32px;
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.chip:hover {
+  border-color: var(--accent-line);
+  color: var(--text);
+}
+
+@media (max-width: 520px) {
+  .wrap {
+    margin-top: 32px;
+  }
+
+  .field,
+  .submit {
+    height: 52px;
+  }
+
+  .submit {
+    flex: 1 1 100%;
+  }
+
+  .chip {
+    min-height: 44px;
+    padding: 0 14px;
+  }
+}
