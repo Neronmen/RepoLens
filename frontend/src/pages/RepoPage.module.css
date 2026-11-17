@@ -14,7 +14,8 @@
   justify-content: space-between;
   gap: 16px;
   padding: 0 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--card-border);
+  background: var(--panel);
 }
 
 .barLeft,
@@ -51,11 +52,11 @@
 .pill {
   flex: none;
   padding: 3px 10px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--bubble-border);
   border-radius: 999px;
   font-family: var(--font-mono);
   font-size: 11.5px;
-  color: var(--faint);
+  color: var(--muted);
 }
 
 .meter {
@@ -97,7 +98,7 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 248px minmax(380px, 560px) minmax(0, 1fr);
+  grid-template-columns: 288px minmax(400px, 600px) minmax(0, 1fr);
 }
 
 .files,
@@ -110,7 +111,7 @@
 
 .files,
 .chat {
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--card-border);
 }
 
 .loading {
@@ -152,7 +153,7 @@
 
 @media (max-width: 1279px) {
   .body {
-    grid-template-columns: 220px minmax(340px, 480px) minmax(0, 1fr);
+    grid-template-columns: 248px minmax(360px, 500px) minmax(0, 1fr);
   }
 
   .meter {

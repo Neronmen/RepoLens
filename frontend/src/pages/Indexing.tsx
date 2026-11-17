@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import LanguageToggle from '../components/LanguageToggle'
 import Logo from '../components/Logo'
+import { translate, getLang, useI18n } from '../i18n'
 import { api, ApiError, type IndexResult } from '../lib/api'
 import styles from './Indexing.module.css'
 
@@ -26,6 +28,7 @@ type State =
 const MIN_DONE_MS = 1100 // để người dùng kịp thấy các bước hoàn thành rồi mới chuyển trang
 
 export default function Indexing() {
+  const { t } = useI18n()
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const repo = (params.get('repo') ?? '').trim()
@@ -48,7 +51,8 @@ export default function Indexing() {
         const status = e instanceof ApiError ? e.status : 0
         setState({
           status: 'error',
-          message: e instanceof Error ? e.message : 'Có lỗi xảy ra, thử lại sau nhé.',
+          // lỗi từ server đã đúng ngôn ngữ lúc nó được tạo; lỗi lạ thì dùng câu chung
+          message: e instanceof Error && e.message ? e.message : translate(getLang(), 'error.generic'),
           // 429 và 503 là server đang bận, thử lại sau vài giây là được
           retryable: status === 429 || status === 503 || status === 0,
         })
@@ -69,7 +73,7 @@ export default function Indexing() {
   if (!repo) {
     return (
       <Shell>
-        <Problem message="Chưa có repo nào để lập chỉ mục." retryable={false} />
+        <Problem message={t('index.noRepo')} retryable={false} />
       </Shell>
     )
   }
@@ -81,19 +85,17 @@ export default function Indexing() {
     <Shell>
       <div className={styles.grid}>
         <div className={styles.left}>
-          <p className={styles.eyebrow}>{state.status === 'error' ? 'Could not index' : 'Indexing'}</p>
+          <p className={styles.eyebrow}>{state.status === 'error' ? t('index.eyebrowError') : t('index.eyebrow')}</p>
           <h1 className={styles.title}>{repo}</h1>
           {state.status === 'error' ? (
             <Problem message={state.message} retryable={state.retryable} />
           ) : (
             <>
-              <p className={styles.lead}>
-                Reading the repo so the agent can search it. This usually takes a few seconds.
-              </p>
+              <p className={styles.lead}>{t('index.lead')}</p>
               <div
                 className={styles.bar}
                 role="progressbar"
-                aria-label="Indexing progress"
+                aria-label={t('index.progress')}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={done ? 100 : undefined}
@@ -101,7 +103,7 @@ export default function Indexing() {
                 <div className={done ? styles.barFull : styles.barRun} />
               </div>
               <p className={styles.time} aria-live="polite">
-                {done ? 'ready' : `${seconds}s elapsed`}
+                {done ? t('index.ready') : t('index.elapsed', { n: seconds })}
               </p>
             </>
           )}
@@ -113,23 +115,27 @@ export default function Indexing() {
               <span className={styles.dot} />
               <span className={styles.dot} />
               <span className={styles.dot} />
-              <span className={styles.cardTitle}>index log</span>
+              <span className={styles.cardTitle}>{t('index.log')}</span>
             </div>
             <ul className={styles.log} aria-live="polite">
-              <Step state={done ? 'done' : 'running'} label="Downloading and reading the repository" detail={done ? 'done' : 'running'} />
               <Step
-                state={done ? 'done' : 'todo'}
-                label="Filtered to source files"
-                detail={result ? `${result.file_count} kept · ${result.skipped} skipped` : ''}
+                state={done ? 'done' : 'running'}
+                label={t('index.stepDownload')}
+                detail={done ? t('index.done') : t('index.running')}
               />
               <Step
                 state={done ? 'done' : 'todo'}
-                label="Split into chunks"
-                detail={result ? `${result.chunk_count} chunks` : ''}
+                label={t('index.stepFilter')}
+                detail={result ? t('index.kept', { kept: result.file_count, skipped: result.skipped }) : ''}
               />
-              <Step state={done ? 'done' : 'todo'} label="Ready to answer" detail="" />
+              <Step
+                state={done ? 'done' : 'todo'}
+                label={t('index.stepChunks')}
+                detail={result ? t('index.chunks', { n: result.chunk_count }) : ''}
+              />
+              <Step state={done ? 'done' : 'todo'} label={t('index.stepReady')} detail="" />
             </ul>
-            <p className={styles.foot}>Skipped: lock files, minified code, binaries, node_modules</p>
+            <p className={styles.foot}>{t('index.skipNote')}</p>
           </div>
         )}
       </div>
@@ -142,6 +148,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div className={styles.page}>
       <header className={styles.header}>
         <Logo />
+        <LanguageToggle />
       </header>
       <main className={styles.main}>{children}</main>
     </div>
@@ -149,17 +156,18 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function Problem({ message, retryable }: { message: string; retryable: boolean }) {
+  const { t } = useI18n()
   return (
     <div className={styles.problem} role="alert">
       <p>{message}</p>
       <div className={styles.actions}>
         {retryable && (
           <button type="button" className={styles.retry} onClick={() => window.location.reload()}>
-            Try again
+            {t('index.retry')}
           </button>
         )}
         <Link to="/" className={styles.other}>
-          Try another repo
+          {t('index.other')}
         </Link>
       </div>
     </div>

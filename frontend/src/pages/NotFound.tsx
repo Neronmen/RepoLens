@@ -1,17 +1,19 @@
 import { Link } from 'react-router-dom'
 import Logo from '../components/Logo'
+import { useI18n } from '../i18n'
 import styles from './NotFound.module.css'
 
 export default function NotFound() {
+  const { t } = useI18n()
   return (
     <main className={styles.page}>
       <Logo />
       <div className={styles.body}>
         <p className={styles.code}>404</p>
-        <h1>Nothing indexed here.</h1>
-        <p className={styles.hint}>This page doesn't exist, or the repo hasn't been added on this server yet.</p>
+        <h1>{t('notfound.title')}</h1>
+        <p className={styles.hint}>{t('notfound.hint')}</p>
         <Link to="/" className={styles.back}>
-          ← Back to start
+          {t('notfound.back')}
         </Link>
       </div>
     </main>

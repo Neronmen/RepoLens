@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import LanguageToggle from '../components/LanguageToggle'
 import Logo from '../components/Logo'
 import Chat from '../features/chat/Chat'
 import { useAsk } from '../features/chat/useAsk'
 import CodeViewer, { type CodeTarget } from '../features/code/CodeViewer'
 import FileTree from '../features/files/FileTree'
+import { useI18n } from '../i18n'
 import { api, ApiError, type FileInfo, type Repo } from '../lib/api'
 import styles from './RepoPage.module.css'
 
@@ -14,6 +16,7 @@ type Loaded = { repo: Repo; files: FileInfo[] }
 type Panel = 'chat' | 'files' | 'code'
 
 export default function RepoPage() {
+  const { t } = useI18n()
   const { repoId } = useParams()
   const id = Number(repoId)
   const [data, setData] = useState<Loaded | null>(null)
@@ -29,9 +32,7 @@ export default function RepoPage() {
       .catch((e: unknown) => {
         if (cancelled) return
         setError(
-          e instanceof ApiError
-            ? { status: e.status, message: e.message }
-            : { status: 0, message: 'Could not load this repo.' },
+          e instanceof ApiError ? { status: e.status, message: e.message } : { status: 0, message: '' },
         )
       })
     return () => {
@@ -42,26 +43,18 @@ export default function RepoPage() {
   useEffect(() => {
     if (data) document.title = `${data.repo.owner}/${data.repo.name} · RepoLens`
     return () => {
-      document.title = 'RepoLens: ask a repo, get receipts'
+      document.title = 'RepoLens'
     }
   }, [data])
 
-  if (!Number.isInteger(id) || id < 1) return <Problem message="This link doesn't point to a repo." />
+  if (!Number.isInteger(id) || id < 1) return <Problem message={t('repo.badLink')} />
   if (error) {
-    return (
-      <Problem
-        message={
-          error.status === 404
-            ? "This repo isn't on the server any more. The free server keeps only the most recent repos."
-            : error.message
-        }
-      />
-    )
+    return <Problem message={error.status === 404 ? t('repo.gone') : error.message || t('repo.loadFail')} />
   }
   if (!data) {
     return (
       <div className={styles.loading} role="status">
-        Loading repo…
+        {t('repo.loading')}
       </div>
     )
   }
@@ -71,6 +64,7 @@ export default function RepoPage() {
 }
 
 function Workspace({ repo, files }: Loaded) {
+  const { t } = useI18n()
   const { turns, busy, ask, stop } = useAsk(repo.id)
   const [panel, setPanel] = useState<Panel>('chat')
   const [code, setCode] = useState<CodeTarget | null>(null)
@@ -79,11 +73,11 @@ function Workspace({ repo, files }: Loaded) {
     let input = 0
     let output = 0
     let ms = 0
-    for (const t of turns) {
-      if (!t.usage) continue
-      input += t.usage.input_tokens
-      output += t.usage.output_tokens
-      ms += t.usage.ms
+    for (const turn of turns) {
+      if (!turn.usage) continue
+      input += turn.usage.input_tokens
+      output += turn.usage.output_tokens
+      ms += turn.usage.ms
     }
     return { input, output, ms }
   }, [turns])
@@ -108,43 +102,41 @@ function Workspace({ repo, files }: Loaded) {
           <span className={styles.repoName} title={`${repo.owner}/${repo.name}`}>
             {repo.owner}/<b>{repo.name}</b>
           </span>
-          <span className={styles.pill}>
-            {repo.file_count} files · {repo.chunk_count} chunks
-          </span>
+          <span className={styles.pill}>{t('topbar.counts', { files: repo.file_count, chunks: repo.chunk_count })}</span>
         </div>
         <div className={styles.barRight}>
           {totals.input > 0 && (
-            <span className={styles.meter} title="Totals for this conversation">
-              {totals.input.toLocaleString('en-US')} in · {totals.output.toLocaleString('en-US')} out ·{' '}
-              {(totals.ms / 1000).toFixed(1)}s
+            <span className={styles.meter} title={t('topbar.meterTitle')}>
+              {t('topbar.meter', {
+                input: totals.input.toLocaleString('en-US'),
+                output: totals.output.toLocaleString('en-US'),
+                secs: (totals.ms / 1000).toFixed(1),
+              })}
             </span>
           )}
+          <LanguageToggle />
           <button
             type="button"
             className={styles.filesBtn}
             onClick={() => setPanel(panel === 'files' ? 'chat' : 'files')}
             aria-pressed={panel === 'files'}
           >
-            Files
+            {t('nav.files')}
           </button>
           <Link to="/" className={styles.newRepo}>
-            New repo
+            {t('nav.newRepo')}
           </Link>
         </div>
       </header>
 
       <div className={styles.body} data-panel={panel}>
         <aside className={styles.files}>
-          <FileTree
-            files={files}
-            activePath={code?.path ?? null}
-            onOpen={openFile}
-          />
+          <FileTree files={files} activePath={code?.path ?? null} onOpen={openFile} />
         </aside>
         <main className={styles.chat}>
           <Chat turns={turns} busy={busy} onAsk={ask} onStop={stop} onOpenCode={openCitation} />
         </main>
-        <section className={styles.code} aria-label="Code viewer">
+        <section className={styles.code} aria-label={t('repo.codeViewer')}>
           <CodeViewer
             repoId={repo.id}
             owner={repo.owner}
@@ -159,14 +151,15 @@ function Workspace({ repo, files }: Loaded) {
 }
 
 function Problem({ message }: { message: string }) {
+  const { t } = useI18n()
   return (
     <div className={styles.problemPage}>
       <Logo />
       <div className={styles.problem} role="alert">
-        <h1>Couldn't open this repo</h1>
+        <h1>{t('repo.problemTitle')}</h1>
         <p>{message}</p>
         <Link to="/" className={styles.newRepo}>
-          Add a repo
+          {t('repo.addRepo')}
         </Link>
       </div>
     </div>
