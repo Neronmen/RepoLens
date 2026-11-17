@@ -15,12 +15,12 @@ from app.i18n import REPO_NOT_FOUND, Msg
 from app.ingest.chunker import split_lines
 from app.ingest.github import RepoError, download_zip, parse_repo_url
 from app.ingest.service import index_repo
-from app.ratelimit import index_limiter
+from app.ratelimit import ask_global, ask_limiter, index_global, index_limiter, read_limiter
 
 MAX_FILE_WINDOW = 400
 
 log = logging.getLogger("repolens.repos")
-router = APIRouter(prefix="/api/repos")
+router = APIRouter(prefix="/api/repos", dependencies=[Depends(read_limiter)])
 
 _ingest_slot = threading.BoundedSemaphore(1)
 
@@ -66,7 +66,7 @@ def _require_repo(conn: sqlite3.Connection, repo_id: int) -> sqlite3.Row:
 
 # Lưu ý: các endpoint ở đây là `def` thường (không async) để FastAPI tự chạy
 # chúng trong threadpool. Tải zip và ghi SQLite đều là việc chặn luồng.
-@router.post("", status_code=201, dependencies=[Depends(index_limiter)])
+@router.post("", status_code=201, dependencies=[Depends(index_limiter), Depends(index_global)])
 def add_repo(
     req: AddRepoRequest,
     conn: sqlite3.Connection = Depends(get_db),
@@ -181,7 +181,8 @@ def list_files(repo_id: int, conn: sqlite3.Connection = Depends(get_db)):
     return [dict(r) for r in rows]
 
 
-@router.get("/{repo_id}/search")
+# tìm kiếm gọi cả API embedding nên tính như một lượt hỏi, không để gọi tự do
+@router.get("/{repo_id}/search", dependencies=[Depends(ask_limiter), Depends(ask_global)])
 def search(
     repo_id: int,
     q: str = Query(min_length=1, max_length=300),

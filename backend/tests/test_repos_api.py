@@ -137,3 +137,28 @@ def test_chi_giu_cac_repo_moi_nhat(client, monkeypatch):
 def test_repo_chua_them_tra_404(client):
     assert client.get("/api/repos/999/search", params={"q": "x"}).status_code == 404
     assert client.get("/api/repos/999/files").status_code == 404
+
+
+def test_header_bao_mat_va_khong_lo_docs(client):
+    res = client.get("/health")
+    assert res.headers["x-content-type-options"] == "nosniff"
+    assert res.headers["x-frame-options"] == "DENY"
+    assert client.get("/docs").status_code == 404
+    assert client.get("/openapi.json").status_code == 404
+
+
+def test_tim_kiem_bi_gioi_han_theo_luot(client, monkeypatch):
+    from app import ratelimit
+
+    repo_id = client.post("/api/repos", json={"url": "a/b"}).json()["id"]
+    monkeypatch.setattr(ratelimit.ask_limiter, "_limit", lambda: 2)
+    codes = [client.get(f"/api/repos/{repo_id}/search", params={"q": "x"}).status_code for _ in range(3)]
+    assert codes == [200, 200, 429]
+
+
+def test_tran_chung_cho_ca_server(client, monkeypatch):
+    from app import ratelimit
+
+    monkeypatch.setattr(ratelimit.index_global, "_limit", lambda: 1)
+    assert client.post("/api/repos", json={"url": "a/b"}).status_code == 201
+    assert client.post("/api/repos", json={"url": "a/c"}).status_code == 429

@@ -120,6 +120,21 @@ proof that embeddings are better. One small repo (57 chunks), one run per mode a
 rank the three modes. Larger repos and vocabulary-mismatch questions are where I would expect
 embeddings to matter, and the benchmark needs them before I can claim it.
 
+## Security
+
+- **Secrets.** The Gemini key only exists as a server environment variable (`.env` is git-ignored, the
+  repo history was scanned for key patterns, none found). The browser never sees it.
+- **Abuse limits.** Per-IP hourly limits on asking, indexing, searching and file reads, plus a
+  server-wide hourly cap so a rotating-IP attacker still cannot burn the free Gemini quota.
+- **Hostile input.** Only `github.com` repos, no redirects followed, zip-bomb and path checks, read-only
+  agent tools scoped to one repo, validated and size-limited request bodies, citations verified server-side.
+- **Hardening.** CSP, `X-Frame-Options`, `nosniff`, HSTS and a strict referrer policy on the frontend;
+  security headers on the API; CORS limited to the frontend origin and the methods and headers it uses;
+  `/docs` disabled in production; container runs as a non-root user; dependency audit is clean.
+- **Code integrity.** Nobody can edit the deployed code without write access to this GitHub repo, which
+  deploys on push. Turn on branch protection for `main` and two-factor login on GitHub and Vercel/Render.
+- **Known gap.** The rate limiter is in memory and per process, so it resets on restart.
+
 ## Tech stack
 
 - **Backend:** Python 3.12, FastAPI, SQLite (FTS5 + vector BLOBs), Server-Sent Events, `google-genai`

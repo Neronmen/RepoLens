@@ -69,6 +69,24 @@ class RateLimiter:
             )
 
 
+class GlobalLimiter(RateLimiter):
+    """Cùng cơ chế nhưng đếm chung cho mọi người dùng."""
+
+    def __call__(self, request: Request) -> None:
+        wait = self.check("*")
+        if wait is not None:
+            raise HTTPException(
+                status_code=429,
+                detail=str(
+                    Msg(
+                        "Hệ thống đang quá tải lượt dùng miễn phí, hãy thử lại sau ít phút.",
+                        "The free service is at capacity right now, please try again in a few minutes.",
+                    )
+                ),
+                headers={"Retry-After": str(int(wait))},
+            )
+
+
 def client_ip(request: Request) -> str:
     # Sau reverse proxy (Render, Vercel...) địa chỉ thật nằm ở X-Forwarded-For.
     # Chỉ tin header này khi được bật rõ ràng, nếu không ai cũng giả mạo IP để né giới hạn.
@@ -83,6 +101,11 @@ ask_limiter = RateLimiter(lambda: get_settings().ask_limit_per_hour)
 index_limiter = RateLimiter(lambda: get_settings().index_limit_per_hour)
 
 
+read_limiter = RateLimiter(lambda: get_settings().read_limit_per_hour)
+ask_global = GlobalLimiter(lambda: get_settings().ask_global_per_hour)
+index_global = GlobalLimiter(lambda: get_settings().index_global_per_hour)
+
+
 def reset_all() -> None:
-    ask_limiter.reset()
-    index_limiter.reset()
+    for limiter in (ask_limiter, index_limiter, read_limiter, ask_global, index_global):
+        limiter.reset()

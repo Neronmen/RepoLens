@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     # Giới hạn mỗi IP mỗi giờ, để bản công khai không bị đốt hết hạn mức miễn phí.
     ask_limit_per_hour: int = 30
     index_limit_per_hour: int = 10
+    read_limit_per_hour: int = 600  # xem file, danh sách file: rẻ nhưng vẫn không để ai cào vô hạn
+    # Trần cho CẢ SERVER, bất kể IP nào. Giới hạn theo IP không cản được kẻ đổi IP liên tục,
+    # nhưng trần chung đảm bảo hạn mức Gemini miễn phí không bao giờ bị đốt hết bởi một đợt tấn công.
+    ask_global_per_hour: int = 400
+    index_global_per_hour: int = 60
+    # Trang tài liệu API tự sinh (/docs) chỉ bật khi phát triển.
+    enable_docs: bool = False
     # Bật khi chạy sau reverse proxy (Render...) để lấy IP thật từ X-Forwarded-For.
     trust_proxy: bool = False
 

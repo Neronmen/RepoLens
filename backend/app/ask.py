@@ -17,7 +17,7 @@ from app.db import connect
 from app.i18n import REPO_NOT_FOUND, Msg
 from app.providers import build_provider
 from app.providers.base import LLMProvider, Message, ModelOverloaded, RateLimited
-from app.ratelimit import ask_limiter
+from app.ratelimit import ask_global, ask_limiter
 
 log = logging.getLogger("repolens.ask")
 router = APIRouter(prefix="/api")
@@ -124,7 +124,7 @@ async def _stream(
     yield sse("done", {})
 
 
-@router.post("/repos/{repo_id}/ask", dependencies=[Depends(ask_limiter)])
+@router.post("/repos/{repo_id}/ask", dependencies=[Depends(ask_limiter), Depends(ask_global)])
 async def ask(
     repo_id: int,
     req: AskRequest,
