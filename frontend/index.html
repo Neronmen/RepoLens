@@ -3,13 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/og.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0a0a0b" />
+    <title>RepoLens: ask a GitHub repo, get answers with receipts</title>
     <meta
       name="description"
-      content="Paste a public GitHub repo and ask it questions. An agent searches, reads and cites the exact lines behind every answer."
+      content="Paste a public GitHub repo and ask it questions. An AI agent searches and reads the code, then cites the exact file and lines behind every answer. Free, English and Vietnamese."
     />
-    <title>RepoLens: ask a repo, get receipts</title>
+    <link rel="canonical" href="https://repo-lens-ruby.vercel.app/" />
+    <meta name="robots" content="index, follow" />
+    <meta name="color-scheme" content="dark" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="RepoLens" />
+    <meta property="og:title" content="RepoLens: ask a repo, get receipts" />
+    <meta property="og:description" content="An AI agent that reads a GitHub repo and answers with verified file:line citations." />
+    <meta property="og:url" content="https://repo-lens-ruby.vercel.app/" />
+    <meta property="og:image" content="https://repo-lens-ruby.vercel.app/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="RepoLens: Ask a repo. Get receipts." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RepoLens: ask a repo, get receipts" />
+    <meta name="twitter:description" content="An AI agent that reads a GitHub repo and answers with verified file:line citations." />
+    <meta name="twitter:image" content="https://repo-lens-ruby.vercel.app/og.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "RepoLens",
+        "url": "https://repo-lens-ruby.vercel.app/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Web",
+        "description": "Ask questions about any public GitHub repository and get answers with verified file and line citations.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "inLanguage": ["en", "vi"]
+      }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -18,7 +50,9 @@
     />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <noscript>RepoLens: paste a public GitHub repo and ask it questions. An AI agent reads the code and cites the exact lines. Please enable JavaScript to use it.</noscript>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

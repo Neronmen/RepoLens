@@ -4,6 +4,7 @@ import LanguageToggle from '../components/LanguageToggle'
 import Logo from '../components/Logo'
 import { translate, getLang, useI18n } from '../i18n'
 import { api, ApiError, type IndexResult } from '../lib/api'
+import { usePageMeta } from '../lib/usePageMeta'
 import styles from './Indexing.module.css'
 
 // React ở chế độ dev chạy mỗi effect hai lần. Nếu gửi hai request lập chỉ mục
@@ -29,6 +30,7 @@ const MIN_DONE_MS = 1100 // để người dùng kịp thấy các bước hoàn
 
 export default function Indexing() {
   const { t } = useI18n()
+  usePageMeta(null, false)
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const repo = (params.get('repo') ?? '').trim()

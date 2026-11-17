@@ -8,6 +8,7 @@ import CodeViewer, { type CodeTarget } from '../features/code/CodeViewer'
 import FileTree from '../features/files/FileTree'
 import { useI18n } from '../i18n'
 import { api, ApiError, type FileInfo, type Repo } from '../lib/api'
+import { usePageMeta } from '../lib/usePageMeta'
 import styles from './RepoPage.module.css'
 
 type Loaded = { repo: Repo; files: FileInfo[] }
@@ -40,12 +41,7 @@ export default function RepoPage() {
     }
   }, [id])
 
-  useEffect(() => {
-    if (data) document.title = `${data.repo.owner}/${data.repo.name} · RepoLens`
-    return () => {
-      document.title = 'RepoLens'
-    }
-  }, [data])
+  usePageMeta(data ? `${data.repo.owner}/${data.repo.name} · RepoLens` : null, false)
 
   if (!Number.isInteger(id) || id < 1) return <Problem message={t('repo.badLink')} />
   if (error) {

@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
 import Logo from '../components/Logo'
 import { useI18n } from '../i18n'
+import { usePageMeta } from '../lib/usePageMeta'
 import styles from './NotFound.module.css'
 
 export default function NotFound() {
   const { t } = useI18n()
+  usePageMeta('404 · RepoLens', false)
   return (
     <main className={styles.page}>
       <Logo />
