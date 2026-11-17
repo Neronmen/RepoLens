@@ -11,6 +11,7 @@ from app.db import get_db, search_chunks
 from app.ingest.chunker import split_lines
 from app.ingest.github import RepoError, download_zip, parse_repo_url
 from app.ingest.service import index_repo
+from app.ratelimit import index_limiter
 
 MAX_FILE_WINDOW = 400
 
@@ -40,7 +41,7 @@ def _require_repo(conn: sqlite3.Connection, repo_id: int) -> sqlite3.Row:
 
 # Lưu ý: các endpoint ở đây là `def` thường (không async) để FastAPI tự chạy
 # chúng trong threadpool. Tải zip và ghi SQLite đều là việc chặn luồng.
-@router.post("", status_code=201)
+@router.post("", status_code=201, dependencies=[Depends(index_limiter)])
 def add_repo(
     req: AddRepoRequest,
     conn: sqlite3.Connection = Depends(get_db),

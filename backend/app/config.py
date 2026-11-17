@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     # chỗ lưu database SQLite
     db_path: Path = ROOT_DIR / "data" / "repolens.sqlite"
 
+    # Giới hạn mỗi IP mỗi giờ, để bản công khai không bị đốt hết hạn mức miễn phí.
+    ask_limit_per_hour: int = 30
+    index_limit_per_hour: int = 10
+    # Bật khi chạy sau reverse proxy (Render...) để lấy IP thật từ X-Forwarded-For.
+    trust_proxy: bool = False
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_origins(cls, value):
