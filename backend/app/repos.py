@@ -7,7 +7,10 @@ from collections.abc import Callable
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.db import get_db, search_chunks
+from app import embeddings
+from app.config import get_settings
+from app.db import connect, get_db
+from app.search import hybrid_search
 from app.i18n import REPO_NOT_FOUND, Msg
 from app.ingest.chunker import split_lines
 from app.ingest.github import RepoError, download_zip, parse_repo_url
@@ -31,6 +34,27 @@ def get_downloader() -> Downloader:
 
 class AddRepoRequest(BaseModel):
     url: str = Field(min_length=1, max_length=300)
+
+
+def _embed_later(repo_id: int) -> None:
+    """Tạo vector ở luồng nền, để người dùng vào hỏi được ngay mà không phải chờ.
+
+    Trong lúc chờ, tìm từ khóa vẫn chạy; vector xong thì tìm theo nghĩa tự bật lên.
+    """
+    if embeddings.get_embedder() is None:
+        return
+
+    def work() -> None:
+        conn = connect(get_settings().db_path)
+        try:
+            n = embeddings.embed_repo(conn, repo_id)
+            log.info("Repo %s: đã tạo vector cho %d đoạn", repo_id, n)
+        except Exception:  # noqa: BLE001  việc nền không được làm sập server
+            log.exception("Tạo vector cho repo %s bị lỗi", repo_id)
+        finally:
+            conn.close()
+
+    threading.Thread(target=work, name=f"embed-{repo_id}", daemon=True).start()
 
 
 def _require_repo(conn: sqlite3.Connection, repo_id: int) -> sqlite3.Row:
@@ -79,6 +103,7 @@ def add_repo(
         ) from e
     finally:
         _ingest_slot.release()
+    _embed_later(stats.repo_id)
     return {
         "id": stats.repo_id,
         "owner": owner,
@@ -102,7 +127,10 @@ def list_repos(conn: sqlite3.Connection = Depends(get_db)):
 def get_repo(repo_id: int, conn: sqlite3.Connection = Depends(get_db)):
     # để trang hỏi đáp tải lại được mà không cần nhớ thông tin repo ở trình duyệt
     row = _require_repo(conn, repo_id)
-    return {k: row[k] for k in ("id", "owner", "name", "indexed_at", "file_count", "chunk_count")}
+    info = {k: row[k] for k in ("id", "owner", "name", "indexed_at", "file_count", "chunk_count")}
+    # giao diện dùng cờ này để báo "đang tìm theo nghĩa" hay mới chỉ tìm từ khóa
+    info["semantic"] = embeddings.has_vectors(conn, repo_id)
+    return info
 
 
 @router.get("/{repo_id}/file")
@@ -161,4 +189,4 @@ def search(
     conn: sqlite3.Connection = Depends(get_db),
 ):
     _require_repo(conn, repo_id)
-    return search_chunks(conn, repo_id, q, limit)
+    return hybrid_search(conn, repo_id, q, limit)

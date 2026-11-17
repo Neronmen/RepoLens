@@ -9,7 +9,7 @@ import sqlite3
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.db import search_chunks
+from app.search import hybrid_search
 from app.ingest.chunker import split_lines
 from app.providers.base import ToolSpec
 
@@ -23,14 +23,15 @@ TOOLS = [
     ToolSpec(
         name="search_code",
         description=(
-            "Tìm các đoạn code liên quan nhất tới vài từ khóa. Dùng từ khóa tiếng Anh "
-            "giống tên hàm, tên biến hay thuật ngữ có thể xuất hiện trong code "
-            "(ví dụ: 'verify signature', 'login session'). Đây thường là bước đầu tiên."
+            "Tìm các đoạn code liên quan nhất. Kết hợp khớp từ khóa và tìm theo nghĩa, nên "
+            "dùng được cả từ khóa giống tên hàm, tên biến (ví dụ: 'verify signature') "
+            "lẫn một câu mô tả ngắn bằng tiếng Anh (ví dụ: 'reject tampered tokens'). "
+            "Đây thường là bước đầu tiên."
         ),
         parameters={
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Vài từ khóa, cách nhau bằng dấu cách"},
+                "query": {"type": "string", "description": "Từ khóa hoặc một câu mô tả ngắn"},
             },
             "required": ["query"],
         },
@@ -146,7 +147,7 @@ def search_code(conn: sqlite3.Connection, repo_id: int, query: Any = "", **_: An
     query = _as_text(query)
     if not query:
         return ToolOutput("Thiếu tham số query (vài từ khóa cần tìm).")
-    hits = search_chunks(conn, repo_id, query, limit=5)
+    hits = hybrid_search(conn, repo_id, query, limit=5)
     if not hits:
         return ToolOutput(
             "Không tìm thấy gì. Thử từ khóa khác (tiếng Anh, giống tên trong code) hoặc dùng list_files."
