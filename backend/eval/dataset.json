@@ -1,0 +1,82 @@
+{
+  "repo": "pallets/itsdangerous",
+  "note": "Đáp án được kiểm tra thủ công với mã nguồn của repo. must_cite: agent phải trích dẫn ít nhất một file có đường dẫn kết thúc bằng một trong các giá trị này (và trích dẫn phải hợp lệ). must_mention: mỗi nhóm là một danh sách các mẫu regex, câu trả lời phải khớp ít nhất một mẫu trong MỖI nhóm.",
+  "questions": [
+    {
+      "id": "expired-exception",
+      "question": "Which exception is raised when a signed value is too old, and where is it defined?",
+      "must_cite": ["exc.py"],
+      "must_mention": [["SignatureExpired"]]
+    },
+    {
+      "id": "key-order",
+      "question": "When several secret keys are configured, which key signs new data and in what order are keys tried when verifying?",
+      "must_cite": ["signer.py"],
+      "must_mention": [["newest|last|most recent|latest"], ["revers|newest first|newest to oldest|last to first|from the last"]]
+    },
+    {
+      "id": "default-hash",
+      "question": "What default hash algorithm does Signer use for its signatures?",
+      "must_cite": ["signer.py"],
+      "must_mention": [["sha1|sha-1"]]
+    },
+    {
+      "id": "key-derivation",
+      "question": "What key derivation methods does Signer support?",
+      "must_cite": ["signer.py"],
+      "must_mention": [["django-concat"], ["hmac"], ["concat"]]
+    },
+    {
+      "id": "timestamp-signer",
+      "question": "Which class adds timestamps to signatures, and which argument limits how old a value may be?",
+      "must_cite": ["timed.py"],
+      "must_mention": [["TimestampSigner"], ["max_age"]]
+    },
+    {
+      "id": "loads-unsafe",
+      "question": "Where is loads_unsafe defined and what is it for?",
+      "must_cite": ["serializer.py", "timed.py"],
+      "must_mention": [["loads_unsafe"], ["signature|verif|valid|tamper|untrusted|payload"]]
+    },
+    {
+      "id": "urlsafe",
+      "question": "Which file defines the URL-safe serializer and what encoding does it rely on?",
+      "must_cite": ["url_safe.py"],
+      "must_mention": [["URLSafeSerializer"], ["base64"]]
+    },
+    {
+      "id": "base64-helpers",
+      "question": "Where are the base64 helper functions and what do they do?",
+      "must_cite": ["encoding.py"],
+      "must_mention": [["base64"]]
+    },
+    {
+      "id": "bad-data",
+      "question": "What exception classes represent invalid or tampered data?",
+      "must_cite": ["exc.py"],
+      "must_mention": [["BadSignature"], ["BadData|BadPayload"]]
+    },
+    {
+      "id": "timing-attack",
+      "question": "How does signature verification avoid timing attacks?",
+      "must_cite": ["signer.py"],
+      "must_mention": [["compare_digest|constant.time|constant-time|timing"]]
+    },
+    {
+      "id": "vi-verify",
+      "question": "Hàm nào dùng để kiểm tra một chữ ký có hợp lệ hay không?",
+      "must_cite": ["signer.py"],
+      "must_mention": [["verify_signature|validate|unsign"]]
+    },
+    {
+      "id": "no-database",
+      "question": "How does this library connect to a PostgreSQL database?",
+      "answerable": false
+    },
+    {
+      "id": "no-oauth",
+      "question": "Where is the OAuth2 login flow implemented?",
+      "answerable": false
+    }
+  ]
+}
