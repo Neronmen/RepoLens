@@ -6,6 +6,7 @@ import GraphScene from '../landing/GraphScene'
 import RepoForm from '../landing/RepoForm'
 import TraceDemo from '../landing/TraceDemo'
 import { useLandingMotion } from '../landing/useLandingMotion'
+import { onAnchorClick } from '../lib/smoothScroll'
 import styles from './Landing.module.css'
 
 const REPO_URL = 'https://github.com/Neronmen/RepoLens'
@@ -28,8 +29,8 @@ export default function Landing() {
           <div className={styles.navRow}>
             <Logo />
             <nav aria-label={t('landing.nav.label')} className={styles.nav}>
-              <a href="#how">{t('landing.nav.how')}</a>
-              <a href="#trace">{t('landing.nav.trace')}</a>
+              <a href="#how" onClick={(e) => onAnchorClick(e, 'how', -40)}>{t('landing.nav.how')}</a>
+              <a href="#trace" onClick={(e) => onAnchorClick(e, 'trace', -40)}>{t('landing.nav.trace')}</a>
               <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
                 {t('landing.nav.github')}
               </a>
