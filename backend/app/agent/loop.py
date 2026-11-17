@@ -14,10 +14,12 @@ from typing import Any
 from app.agent.citations import check_citations
 from app.agent.tools import TOOLS, ToolOutput, execute_tool
 from app.i18n import Msg
-from app.providers.base import LLMProvider, Message, ToolResult, Usage
+from app.providers.base import LLMProvider, Message, ModelOverloaded, RateLimited, ToolResult, Usage
 
 log = logging.getLogger("repolens.agent")
 
+STEP_RETRIES = 2  # số lần chạy lại một bước khi model báo bận giữa chừng
+STEP_RETRY_DELAY = 2.0
 MAX_STEPS = 6  # số lần hỏi model tối đa cho một câu hỏi
 MAX_CALLS_PER_STEP = 4  # số công cụ tối đa model được gọi trong một lần
 OLD_RESULT_CHARS = 500  # kết quả công cụ của các bước cũ chỉ giữ chừng này ký tự
@@ -108,18 +110,32 @@ async def run_agent(
         text = ""
         calls = []
 
-        # Ở lượt cuối không đưa công cụ nữa, để model buộc phải trả lời.
-        async for ev in provider.stream(
-            compact_old_results(messages), system=system, tools=None if is_last else TOOLS
-        ):
-            if ev.text:
-                text += ev.text
-                yield AgentEvent("token", {"step": step, "text": ev.text})
-            if ev.tool_call:
-                calls.append(ev.tool_call)
-            if ev.usage:
-                total.input_tokens += ev.usage.input_tokens
-                total.output_tokens += ev.usage.output_tokens
+        # Gemini free hay báo "bận" ngay giữa lúc đang trả lời. Provider chỉ tự thử lại
+        # khi chưa có chữ nào gửi đi, nên ở đây mình làm nốt: bỏ phần dở dang, báo giao
+        # diện xóa nó đi, rồi chạy lại bước này thay vì làm hỏng cả câu trả lời.
+        for attempt in range(STEP_RETRIES + 1):
+            try:
+                # Ở lượt cuối không đưa công cụ nữa, để model buộc phải trả lời.
+                async for ev in provider.stream(
+                    compact_old_results(messages), system=system, tools=None if is_last else TOOLS
+                ):
+                    if ev.text:
+                        text += ev.text
+                        yield AgentEvent("token", {"step": step, "text": ev.text})
+                    if ev.tool_call:
+                        calls.append(ev.tool_call)
+                    if ev.usage:
+                        total.input_tokens += ev.usage.input_tokens
+                        total.output_tokens += ev.usage.output_tokens
+                break
+            except (ModelOverloaded, RateLimited):
+                if attempt >= STEP_RETRIES:
+                    raise
+                log.warning("Model báo bận ở bước %d, thử lại lần %d", step, attempt + 1)
+                if text:
+                    yield AgentEvent("preamble", {"step": step, "text": ""})  # chữ rỗng = chỉ xóa phần dở
+                text, calls = "", []
+                await asyncio.sleep(STEP_RETRY_DELAY * (attempt + 1))
 
         # Lượt cuối mà model vẫn đòi gọi công cụ thì bỏ qua yêu cầu đó: không còn
         # lượt nào để nó đọc kết quả, nên chạy công cụ chỉ phí công và làm mất

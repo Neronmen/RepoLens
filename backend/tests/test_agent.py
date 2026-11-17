@@ -7,7 +7,7 @@ from app.agent.citations import check_citations, extract_citations
 from app.agent.loop import run_agent
 from app.db import connect
 from app.ingest.service import index_repo
-from app.providers.base import StreamEvent, ToolCall, Usage
+from app.providers.base import ModelOverloaded, StreamEvent, ToolCall, Usage
 from tests.test_ingest import tao_zip
 
 AUTH = "import hashlib\n\ndef login_user(name, password):\n    return check(name, password)\n"
@@ -299,3 +299,44 @@ def test_agent_khong_chan_event_loop_khi_chay_cong_cu(db, monkeypatch):
 
     # nếu công cụ chạy thẳng trong event loop thì sẽ có một khoảng đứng ~0.4s
     assert asyncio.run(thu()) < 0.2
+
+
+class ProviderBanGiuaChung:
+    """Lần đầu viết dở rồi báo bận; lần sau trả lời trọn vẹn."""
+
+    def __init__(self):
+        self.lan = 0
+
+    async def stream(self, messages, system="", tools=None):
+        self.lan += 1
+        if self.lan == 1:
+            yield StreamEvent(text="Codebase này là")
+            raise ModelOverloaded()
+        yield StreamEvent(text="Đây là câu trả lời đủ.")
+        yield StreamEvent(usage=Usage(input_tokens=10, output_tokens=5))
+
+
+def test_model_ban_giua_chung_thi_chay_lai_buoc_do(db, monkeypatch):
+    monkeypatch.setattr(loop, "STEP_RETRY_DELAY", 0)
+    events = chay(ProviderBanGiuaChung(), db)
+    types = [e.type for e in events]
+    assert "error" not in types
+    # phần dở dang bị xóa bằng một lời dẫn rỗng, rồi câu trả lời đủ được gửi
+    assert ("preamble", "") in [(e.type, e.data["text"]) for e in events if e.type == "preamble"]
+    # phần chữ sau lần xóa là câu trả lời đủ, và luồng kết thúc bình thường
+    marker = next(i for i, e in enumerate(events) if e.type == "preamble")
+    after = "".join(e.data["text"] for e in events[marker:] if e.type == "token")
+    assert after == "Đây là câu trả lời đủ."
+    assert events[-1].type in ("usage", "done") and "error" not in [e.type for e in events]
+
+
+def test_ban_mai_thi_van_bao_loi_sau_khi_het_so_lan_thu(db, monkeypatch):
+    monkeypatch.setattr(loop, "STEP_RETRY_DELAY", 0)
+
+    class Luon503:
+        async def stream(self, messages, system="", tools=None):
+            raise ModelOverloaded()
+            yield  # pragma: no cover
+
+    with pytest.raises(ModelOverloaded):
+        chay(Luon503(), db)
