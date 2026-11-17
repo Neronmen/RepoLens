@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import LanguageToggle from '../components/LanguageToggle'
 import Logo from '../components/Logo'
 import UserMenu from '../features/auth/UserMenu'
@@ -114,9 +115,14 @@ export default function Landing() {
       <footer className={styles.container}>
         <div className={styles.footer}>
           <span className={styles.brand}>{t('landing.footer.brand')}</span>
-          <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className={styles.source}>
-            {t('landing.footer.source')}
-          </a>
+          <span className={styles.footLinks}>
+            <Link to="/privacy" className={styles.source}>
+              {t('landing.footer.privacy')}
+            </Link>
+            <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className={styles.source}>
+              {t('landing.footer.source')}
+            </a>
+          </span>
         </div>
       </footer>
     </div>
