@@ -47,9 +47,14 @@ def test_hoi_dap_tron_ven_qua_sse(repo_id):
     res = hoi(provider, repo_id)
     assert res.headers["content-type"].startswith("text/event-stream")
     ev = doc_sse(res.text)
-    assert [e for e, _ in ev] == ["tool_call", "tool_result", "token", "citations", "usage", "done"]
+    ten = [e for e, _ in ev]
+    # chữ có thể tới thành vài mẩu vì bộ che key giữ lại phần đuôi chưa chắc xong
+    assert [t for i, t in enumerate(ten) if not (t == "token" and ten[i - 1] == "token")] == [
+        "tool_call", "tool_result", "token", "citations", "usage", "done"
+    ]
     assert ev[0][1]["name"] == "grep"
-    assert ev[3][1]["items"][0]["valid"] is True
+    assert "".join(d["text"] for e, d in ev if e == "token") == "Hàm đăng nhập ở [src/auth.py:3-4]."
+    assert next(d for e, d in ev if e == "citations")["items"][0]["valid"] is True
 
 
 def test_lich_su_duoc_gui_kem(repo_id):

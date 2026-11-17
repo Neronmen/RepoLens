@@ -134,6 +134,12 @@ embeddings to matter, and the benchmark needs them before I can claim it.
 
 - **Secrets.** The Gemini key only exists as a server environment variable (`.env` is git-ignored, the
   repo history was scanned for key patterns, none found). The browser never sees it.
+- **Leaked secrets in other people's repos.** If a repo has a real key in it, the agent reports where and
+  what kind, but never prints the value. Keys, tokens, JWTs, private keys, URL passwords and hard-coded
+  `password = "..."` are masked (`AKIA****[masked]`) in tool results before the model sees them and again
+  in the streamed answer, so it is enforced in code, not by asking the model nicely.
+- **Scope and honesty.** The system prompt keeps the agent on the repo (off-topic questions are refused
+  without spending tool calls) and tells it to say "not enough information" instead of guessing.
 - **Abuse limits.** Per-IP hourly limits on asking, indexing, searching and file reads, plus a
   server-wide hourly cap so a rotating-IP attacker still cannot burn the free Gemini quota.
 - **Hostile input.** Only `github.com` repos, no redirects followed, zip-bomb and path checks, read-only

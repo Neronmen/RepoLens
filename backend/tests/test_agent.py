@@ -340,3 +340,22 @@ def test_ban_mai_thi_van_bao_loi_sau_khi_het_so_lan_thu(db, monkeypatch):
 
     with pytest.raises(ModelOverloaded):
         chay(Luon503(), db)
+
+
+def test_key_trong_repo_bi_che_truoc_khi_toi_model_va_giao_dien():
+    key = "AKIAIOSFODNN7EXAMPLE"
+    conn = connect(":memory:")
+    stats = index_repo(conn, "a", "b", tao_zip({"r/src/cfg.py": f'AWS_KEY = "{key}"\n'}))
+    provider = ProviderKichBan([
+        [goi("read_file", path="src/cfg.py", start_line=1, end_line=1)],
+        # model "lỡ" gõ lại nguyên key, kể cả khi bị cắt đôi giữa hai mẩu chữ
+        [chu("Lộ key AKIAIOSFO"), chu("DNN7EXAMPLE ở [src/cfg.py:1]. Hãy đổi ngay.")],
+    ])
+    events = chay(provider, (conn, stats.repo_id), "repo có lộ key không?")
+
+    gui_cho_model = str(provider.da_nhan[1]["messages"])
+    assert key not in gui_cho_model and "đã che" in gui_cho_model
+    gui_cho_nguoi_dung = " ".join(str(e.data) for e in events)
+    assert key not in gui_cho_nguoi_dung
+    cau_tra_loi = "".join(e.data["text"] for e in events if e.type == "token")
+    assert "AKIA****" in cau_tra_loi and "Hãy đổi ngay" in cau_tra_loi
