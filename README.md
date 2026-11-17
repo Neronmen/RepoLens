@@ -6,6 +6,9 @@ Paste a public repo. An AI agent searches the code, reads the files it needs, an
 citations like `signer.py:236-241`. Every citation is checked against the index, and you can
 watch each step the agent took.
 
+**Live demo:** https://repo-lens-ruby.vercel.app (free hosting: the first request after idle can take
+about half a minute while the server wakes up).
+
 It runs entirely on free tiers: no paid server, no paid database, no paid model.
 
 ## What makes it different from "chat with your code"
