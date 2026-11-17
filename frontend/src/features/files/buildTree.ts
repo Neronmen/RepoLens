@@ -37,6 +37,22 @@ function sortLevel(nodes: TreeNode[]) {
   for (const n of nodes) if (n.kind === 'dir') sortLevel(n.children)
 }
 
+/** Giữ lại các file có đường dẫn chứa `query` (không phân biệt hoa thường) cùng các thư mục cha của chúng. */
+export function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return nodes
+  const out: TreeNode[] = []
+  for (const n of nodes) {
+    if (n.kind === 'file') {
+      if (n.path.toLowerCase().includes(q)) out.push(n)
+    } else {
+      const children = filterTree(n.children, q)
+      if (children.length) out.push({ ...n, children })
+    }
+  }
+  return out
+}
+
 /** Các thư mục cha của một file, để mở sẵn cây tới đúng file được trích dẫn. */
 export function parentDirs(path: string): string[] {
   const parts = path.split('/').slice(0, -1)
