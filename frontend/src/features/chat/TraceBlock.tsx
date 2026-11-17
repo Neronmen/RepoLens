@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { useI18n } from '../../i18n'
 import type { Step, Turn } from './turns'
 import styles from './TraceBlock.module.css'
 
-/** Tóm tắt tham số của một công cụ thành một dòng ngắn dễ đọc. */
+/** Tóm tắt tham số của một công cụ thành một dòng ngắn dễ đọc. Đây là mã, nên giữ nguyên, không dịch. */
 export function describeArgs(step: Pick<Step, 'name' | 'args'>): string {
   const a = step.args
   const str = (v: unknown) => (typeof v === 'string' ? v : '')
@@ -30,23 +31,22 @@ function formatMs(ms: number): string {
   return ms < 10 ? `${ms.toFixed(1)}ms` : `${Math.round(ms)}ms`
 }
 
-function formatChars(n: number): string {
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}k chars` : `${n} chars`
+function formatSize(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
 }
 
 export default function TraceBlock({ turn }: { turn: Turn }) {
+  const { t, tp } = useI18n()
   // Màn hẹp thì thu gọn sẵn để câu trả lời không bị đẩy xuống quá xa.
   const [open, setOpen] = useState(() => window.matchMedia('(min-width: 700px)').matches)
   if (turn.steps.length === 0) return null
 
-  const label = `${turn.steps.length} tool call${turn.steps.length === 1 ? '' : 's'}`
-
   return (
-    <section className={styles.trace} aria-label="Agent trace">
+    <section className={styles.trace} aria-label={t('trace.label')}>
       <button type="button" className={styles.head} onClick={() => setOpen(!open)} aria-expanded={open}>
-        <span>trace</span>
+        <span>{t('trace.title')}</span>
         <span>
-          {label} <span aria-hidden="true">{open ? '▴' : '▾'}</span>
+          {tp('chat.toolCalls', turn.steps.length)} <span aria-hidden="true">{open ? '▴' : '▾'}</span>
         </span>
       </button>
       {open && (
@@ -60,10 +60,10 @@ export default function TraceBlock({ turn }: { turn: Turn }) {
               </span>
               <span className={styles.meta}>
                 {s.status === 'running' ? (
-                  <span className={styles.running}>running_</span>
+                  <span className={styles.running}>{t('trace.running')}</span>
                 ) : (
                   <>
-                    {formatChars(s.chars ?? 0)} · {formatMs(s.ms ?? 0)}
+                    {t('trace.chars', { n: formatSize(s.chars ?? 0) })} · {formatMs(s.ms ?? 0)}
                   </>
                 )}
               </span>

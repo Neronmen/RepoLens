@@ -1,10 +1,9 @@
+/* Panel trace nằm bên trong thẻ câu trả lời, nền tối hơn thẻ một chút để tách lớp. */
 .trace {
-  border: 1px solid var(--border);
-  border-radius: 10px;
   background: var(--code-bg);
+  border-bottom: 1px solid var(--border);
   font-family: var(--font-mono);
   font-size: 12.5px;
-  overflow: hidden;
 }
 
 .head {
@@ -13,7 +12,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 18px;
   border: 0;
   background: transparent;
   color: var(--faint);
@@ -28,8 +27,7 @@
 .list {
   list-style: none;
   margin: 0;
-  padding: 4px 14px 12px;
-  border-top: 1px solid var(--border);
+  padding: 0 18px 14px;
 }
 
 .row {

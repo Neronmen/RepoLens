@@ -1,4 +1,5 @@
 import { Fragment, useMemo } from 'react'
+import { useI18n } from '../../i18n'
 import type { Citation } from '../../lib/sse'
 import { parseMarkdown, type Block, type Inline } from './markdown'
 import styles from './Answer.module.css'
@@ -29,13 +30,14 @@ export function CitationChip({
   citation?: Citation
   onOpen: OpenCode
 }) {
+  const { t } = useI18n()
   // chưa có kết quả kiểm chứng (đang stream) thì coi như chưa biết, hiện trung tính
   const state = !citation ? 'pending' : !citation.valid ? 'invalid' : citation.seen ? 'verified' : 'unread'
   const hint = {
-    pending: 'Checking…',
-    invalid: 'Could not verify: this file or line range does not exist',
-    verified: 'Verified: the agent read this code',
-    unread: 'The lines exist, but the agent did not open this file',
+    pending: t('cite.pending'),
+    invalid: t('cite.invalid'),
+    verified: t('cite.verified'),
+    unread: t('cite.unread'),
   }[state]
 
   const label = `${basename(path)}:${rangeLabel(start, end)}`
@@ -144,8 +146,10 @@ export default function Answer({
 
 /** Hàng "nguồn" dưới câu trả lời: mọi trích dẫn của lượt này và bao nhiêu cái đã được kiểm chứng. */
 export function Sources({ citations, onOpen }: { citations: Citation[]; onOpen: OpenCode }) {
+  const { t, tp } = useI18n()
   if (citations.length === 0) return null
   const verified = citations.filter((c) => c.valid).length
+  const allGood = verified === citations.length
   return (
     <div className={styles.sources}>
       <div className={styles.chips}>
@@ -161,10 +165,16 @@ export function Sources({ citations, onOpen }: { citations: Citation[]; onOpen: 
         ))}
       </div>
       <p className={styles.tally}>
-        {citations.length} citation{citations.length === 1 ? '' : 's'} · {verified} verified against the index
-        {verified < citations.length && (
-          <span className={styles.warn}> · {citations.length - verified} could not be verified</span>
+        {allGood && (
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" className={styles.tick}>
+            <circle cx="7" cy="7" r="6" fill="none" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M4.2 7.2l2 2 3.6-3.8" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         )}
+        <span>
+          {tp('cite.tally', citations.length, { v: verified })}
+          {!allGood && <span className={styles.warn}>{t('cite.unverified', { k: citations.length - verified })}</span>}
+        </span>
       </p>
     </div>
   )
