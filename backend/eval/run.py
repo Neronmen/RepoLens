@@ -2,16 +2,23 @@
 
 Cách chạy (từ thư mục backend, cần GEMINI_API_KEY trong .env):
 
-    python -m eval.run
+    python -m eval.run                  # tìm lai (mặc định)
+    python -m eval.run --mode keyword   # chỉ FTS5
+    python -m eval.run --mode vector    # chỉ embedding
+
+Ba chế độ cho ra ba file trong eval/results/, để so sánh công bằng cùng một bộ câu hỏi.
 """
+import argparse
 import asyncio
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 from app.agent.loop import run_agent
 from app.config import get_settings
+from app import embeddings
 from app.db import connect
 from app.ingest.github import download_zip, parse_repo_url
 from app.ingest.service import index_repo
@@ -71,7 +78,9 @@ async def ask_with_retry(provider, conn, repo_id: int, label: str, question: dic
     return result  # pragma: no cover
 
 
-async def main() -> int:
+async def main(mode: str) -> int:
+    # đặt trước khi đọc cấu hình, để cả agent lẫn công cụ tìm kiếm cùng dùng chế độ này
+    os.environ["SEARCH_MODE"] = mode
     dataset = json.loads((HERE / "dataset.json").read_text(encoding="utf-8"))
     settings = get_settings()
     owner, name = parse_repo_url(dataset["repo"])
@@ -80,6 +89,12 @@ async def main() -> int:
     conn = connect(":memory:")
     stats = index_repo(conn, owner, name, download_zip(owner, name))
     print(f"  {stats.file_count} files, {stats.chunk_count} chunks", flush=True)
+    if mode != "keyword":
+        n = embeddings.embed_repo(conn, stats.repo_id)
+        print(f"  embedded {n} chunks", flush=True)
+        if n == 0:
+            print("  no vectors were created (missing key or quota?), refusing to label this run as", mode)
+            return 1
 
     provider = build_provider(settings)
     results: list[Result] = []
@@ -95,9 +110,15 @@ async def main() -> int:
     meta = {
         "repo": dataset["repo"],
         "model": settings.gemini_model,
+        "search_mode": mode,
         "run_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     }
     summary = summarize(results)
+    # tách riêng nhóm câu "diễn đạt khác từ vựng của code", nơi tìm theo nghĩa đáng lẽ phải thắng
+    groups = {q["id"]: q.get("group", "keyword-friendly") for q in questions}
+    for name in sorted(set(groups.values())):
+        part = [r for r in results if groups[r.id] == name]
+        summary[f"group:{name}"] = f"{sum(r.passed for r in part)}/{len(part)}"
     out = HERE / "results"
     out.mkdir(exist_ok=True)
     payload = {
@@ -105,11 +126,13 @@ async def main() -> int:
         "summary": summary,
         "results": [{k: v for k, v in r.__dict__.items() if k != "answer"} | {"answer": r.answer} for r in results],
     }
-    (out / "latest.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    (out / "latest.md").write_text(render_markdown(meta, summary, results), encoding="utf-8")
+    (out / f"{mode}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    (out / f"{mode}.md").write_text(render_markdown(meta, summary, results), encoding="utf-8")
     print("\n" + json.dumps(summary, indent=2))
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--mode", choices=["keyword", "vector", "hybrid"], default="hybrid")
+    sys.exit(asyncio.run(main(ap.parse_args().mode)))
