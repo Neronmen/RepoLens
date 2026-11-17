@@ -17,6 +17,9 @@ It runs entirely on free tiers: no paid server, no paid database, no paid model.
   are streamed to the UI as they happen.
 - **Measured, not assumed.** A benchmark with hand-checked answers scores the agent on correctness,
   citation validity, honesty on unanswerable questions, latency and token cost (results below).
+- **Bilingual (English / Vietnamese).** A language switch changes the whole interface instantly and is
+  remembered. The browser sends an `X-Lang` header so server errors arrive in the same language, and the
+  agent answers in the language of the question. A test fails the build if one language misses a string.
 - **Built for hostile input.** Repo contents are written by strangers. The agent's tools are read-only
   and scoped to one repo, file contents are treated as data rather than instructions, and the
   indexer defends against zip bombs, path tricks and oversized repos.
