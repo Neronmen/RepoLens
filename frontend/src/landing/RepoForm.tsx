@@ -1,5 +1,6 @@
 import { type FormEvent, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useI18n } from '../i18n'
 import styles from './RepoForm.module.css'
 
 const EXAMPLES = ['pallets/itsdangerous', 'tiangolo/fastapi']
@@ -18,9 +19,10 @@ function looksLikeRepo(raw: string): boolean {
 
 export default function RepoForm() {
   const navigate = useNavigate()
+  const { t } = useI18n()
   const inputRef = useRef<HTMLInputElement>(null)
   const [value, setValue] = useState('pallets/itsdangerous')
-  const [error, setError] = useState('')
+  const [error, setError] = useState(false)
   const inputId = useId()
   const errorId = useId()
 
@@ -28,7 +30,7 @@ export default function RepoForm() {
     e.preventDefault()
     const repo = value.trim()
     if (!looksLikeRepo(repo)) {
-      setError('That does not look like a GitHub repo. Try owner/repo or https://github.com/owner/repo.')
+      setError(true)
       inputRef.current?.focus()
       return
     }
@@ -37,7 +39,7 @@ export default function RepoForm() {
 
   function pick(example: string) {
     setValue(example)
-    setError('')
+    setError(false)
     inputRef.current?.focus()
   }
 
@@ -45,7 +47,7 @@ export default function RepoForm() {
     <div className={styles.wrap}>
       <form className={styles.form} onSubmit={submit} noValidate data-hero="form">
         <label htmlFor={inputId} className="sr-only">
-          GitHub repository URL
+          {t('landing.form.label')}
         </label>
         <div className={`${styles.field} ${error ? styles.invalid : ''}`}>
           <span className={styles.prefix} aria-hidden="true">
@@ -65,22 +67,22 @@ export default function RepoForm() {
             aria-describedby={error ? errorId : undefined}
             onChange={(e) => {
               setValue(e.target.value)
-              if (error) setError('')
+              if (error) setError(false)
             }}
           />
         </div>
         <button type="submit" className={styles.submit}>
-          Index repo →
+          {t('landing.form.submit')}
         </button>
         {error && (
           <p id={errorId} className={styles.error} role="alert">
-            {error}
+            {t('landing.form.error')}
           </p>
         )}
       </form>
 
       <div className={styles.chips} data-hero="chips">
-        <span>try</span>
+        <span>{t('landing.form.try')}</span>
         {EXAMPLES.map((ex) => (
           <button key={ex} type="button" className={styles.chip} onClick={() => pick(ex)}>
             {ex}

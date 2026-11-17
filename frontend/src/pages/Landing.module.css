@@ -42,6 +42,10 @@
   transition: color 0.15s;
 }
 
+.nav > :last-child {
+  margin-left: 8px;
+}
+
 .nav a:hover {
   color: var(--accent);
 }
@@ -239,8 +243,31 @@
     padding-right: 20px;
   }
 
+  .navRow {
+    flex-wrap: nowrap;
+  }
+
+  .nav {
+    font-size: 13px;
+    gap: 0;
+    min-width: 0;
+  }
+
   .nav a {
-    padding: 0 7px;
+    padding: 0 5px;
+    white-space: nowrap;
+  }
+
+  .nav > div {
+    flex-shrink: 0;
+  }
+
+  .nav button {
+    min-width: 36px;
+  }
+
+  .nav > :last-child {
+    margin-left: 4px;
   }
 
   .hero {
@@ -265,5 +292,11 @@
 
   .step {
     padding: 24px 20px 28px;
+  }
+}
+
+@media (max-width: 420px) {
+  .nav a {
+    padding: 0 3px;
   }
 }

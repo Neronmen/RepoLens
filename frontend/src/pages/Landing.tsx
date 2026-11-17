@@ -1,5 +1,7 @@
 import { useRef } from 'react'
+import LanguageToggle from '../components/LanguageToggle'
 import Logo from '../components/Logo'
+import { useI18n } from '../i18n'
 import GraphScene from '../landing/GraphScene'
 import RepoForm from '../landing/RepoForm'
 import TraceDemo from '../landing/TraceDemo'
@@ -9,26 +11,15 @@ import styles from './Landing.module.css'
 const REPO_URL = 'https://github.com/Neronmen/RepoLens'
 
 const STEPS = [
-  {
-    n: '01',
-    title: 'Index',
-    text: 'The repo is downloaded, filtered to real source files, split into overlapping chunks and stored for full-text search.',
-  },
-  {
-    n: '02',
-    title: 'Investigate',
-    text: 'An agent calls search, grep and read tools over several steps. Read-only, scoped to one repo, capped at six steps.',
-  },
-  {
-    n: '03',
-    title: 'Cite',
-    text: 'Every claim links to file and line range. Each citation is checked against the index, so invented ones get flagged.',
-  },
-]
+  { n: '01', title: 'landing.how.step1.title', text: 'landing.how.step1.text' },
+  { n: '02', title: 'landing.how.step2.title', text: 'landing.how.step2.text' },
+  { n: '03', title: 'landing.how.step3.title', text: 'landing.how.step3.text' },
+] as const
 
 export default function Landing() {
   const rootRef = useRef<HTMLDivElement>(null)
   useLandingMotion(rootRef)
+  const { t } = useI18n()
 
   return (
     <div className={styles.page} ref={rootRef}>
@@ -36,12 +27,13 @@ export default function Landing() {
         <div className={styles.container}>
           <div className={styles.navRow}>
             <Logo />
-            <nav aria-label="Primary" className={styles.nav}>
-              <a href="#how">How it works</a>
-              <a href="#trace">Trace</a>
+            <nav aria-label={t('landing.nav.label')} className={styles.nav}>
+              <a href="#how">{t('landing.nav.how')}</a>
+              <a href="#trace">{t('landing.nav.trace')}</a>
               <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
-                GitHub
+                {t('landing.nav.github')}
               </a>
+              <LanguageToggle />
             </nav>
           </div>
         </div>
@@ -51,23 +43,22 @@ export default function Landing() {
         <section className={`${styles.container} ${styles.hero}`} aria-labelledby="hero-title">
           <div className={styles.heroText}>
             <p className={styles.eyebrow} data-hero="eyebrow">
-              Agentic code Q&amp;A
+              {t('landing.hero.eyebrow')}
             </p>
             <h1 id="hero-title" className={styles.title}>
               <span className={styles.lineMask}>
                 <span className={styles.line} data-hero="line">
-                  Ask a repo.
+                  {t('landing.hero.line1')}
                 </span>
               </span>
               <span className={styles.lineMask}>
                 <span className={styles.line} data-hero="line">
-                  Get receipts.
+                  {t('landing.hero.line2')}
                 </span>
               </span>
             </h1>
             <p className={styles.lead} data-hero="lead">
-              Paste any public GitHub repo. An agent searches, reads and cites the exact lines behind every answer, and
-              you can watch each step it takes.
+              {t('landing.hero.lead')}
             </p>
             <RepoForm />
           </div>
@@ -78,17 +69,17 @@ export default function Landing() {
 
         <section id="how" className={`${styles.container} ${styles.section}`} aria-labelledby="how-title">
           <p className={styles.kicker} data-reveal>
-            How it works
+            {t('landing.how.kicker')}
           </p>
           <h2 id="how-title" className={styles.h2} data-reveal>
-            Three moves. No guessing.
+            {t('landing.how.title')}
           </h2>
           <ol className={styles.steps} data-stagger>
             {STEPS.map((s) => (
               <li key={s.n} className={styles.step}>
                 <span className={styles.stepNum}>{s.n}</span>
-                <h3 className={styles.stepTitle}>{s.title}</h3>
-                <p className={styles.stepText}>{s.text}</p>
+                <h3 className={styles.stepTitle}>{t(s.title)}</h3>
+                <p className={styles.stepText}>{t(s.text)}</p>
               </li>
             ))}
           </ol>
@@ -97,14 +88,13 @@ export default function Landing() {
         <section id="trace" className={`${styles.container} ${styles.section} ${styles.trace}`} aria-labelledby="trace-title">
           <div className={styles.traceText}>
             <p className={styles.kicker} data-reveal>
-              Trace
+              {t('landing.trace.kicker')}
             </p>
             <h2 id="trace-title" className={styles.h2} data-reveal>
-              Watch it think, step by step.
+              {t('landing.trace.title')}
             </h2>
             <p className={styles.traceLead} data-reveal>
-              Each tool call, its arguments, how long it took and how much text came back. Nothing is hidden behind a
-              spinner.
+              {t('landing.trace.lead')}
             </p>
           </div>
           <TraceDemo />
@@ -113,9 +103,9 @@ export default function Landing() {
 
       <footer className={styles.container}>
         <div className={styles.footer}>
-          <span className={styles.brand}>repolens · built in public</span>
+          <span className={styles.brand}>{t('landing.footer.brand')}</span>
           <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className={styles.source}>
-            View source on GitHub ↗
+            {t('landing.footer.source')}
           </a>
         </div>
       </footer>

@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import FallbackGraph from './FallbackGraph'
+import { useI18n } from '../i18n'
 import styles from './GraphScene.module.css'
-
-const LABEL = "Code files drawn as a graph, with the agent's path highlighted"
 
 type Status = 'loading' | 'ready' | 'fallback'
 
 export default function GraphScene() {
+  const { t } = useI18n()
+  const label = t('landing.scene.label')
+  const labelRef = useRef(label)
+  labelRef.current = label
   const hostRef = useRef<HTMLDivElement>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [reduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -24,7 +27,7 @@ export default function GraphScene() {
           if (disposed) return
           dispose = createGraphScene(host, {
             reduceMotion: reduced,
-            ariaLabel: LABEL,
+            ariaLabel: labelRef.current,
             labelClass: styles.label,
             onFail: () => setStatus('fallback'),
           })
@@ -43,12 +46,17 @@ export default function GraphScene() {
     }
   }, [reduced])
 
+  // Đổi ngôn ngữ chỉ cập nhật nhãn của canvas, không dựng lại cảnh 3D.
+  useEffect(() => {
+    hostRef.current?.querySelector('canvas')?.setAttribute('aria-label', label)
+  }, [label, status])
+
   const ready = status === 'ready'
   return (
     <div className={styles.frame}>
-      <FallbackGraph className={`${styles.fallback} ${ready ? styles.hidden : ''}`} hidden={ready} label={LABEL} />
+      <FallbackGraph className={`${styles.fallback} ${ready ? styles.hidden : ''}`} hidden={ready} label={label} />
       <div ref={hostRef} className={styles.host} />
-      <span className={styles.badge}>{ready && !reduced ? 'live: agent walking the repo' : 'agent path: search, read, cite'}</span>
+      <span className={styles.badge}>{ready && !reduced ? t('landing.scene.badgeLive') : t('landing.scene.badgeStatic')}</span>
     </div>
   )
 }
