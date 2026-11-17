@@ -1,18 +1,72 @@
 .nav {
-  padding: 16px 0;
-  overflow-y: auto;
   height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
 }
 
 .heading {
   margin: 0;
-  padding: 0 20px 12px;
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 400;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.1em;
   color: var(--faint);
+}
+
+.count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.filter {
+  position: relative;
+  margin: 0 12px 10px;
+}
+
+.filter input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px 0 32px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: #141417;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+.filter input::placeholder {
+  color: var(--faint);
+}
+
+.filter input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 11px;
+  top: 11px;
+  color: var(--faint);
+  pointer-events: none;
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 16px;
 }
 
 .list {
@@ -21,38 +75,108 @@
   padding: 0;
 }
 
+.row {
+  position: relative;
+}
+
 .item {
+  position: relative;
   width: 100%;
-  min-height: 36px;
+  min-height: 30px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding-right: 16px;
+  gap: 7px;
+  padding-right: 12px;
   border: 0;
   border-left: 2px solid transparent;
   background: transparent;
-  color: var(--muted);
-  font-family: var(--font-mono);
+  color: #c4c4cc;
+  font-family: var(--font-sans);
   font-size: 13px;
   text-align: left;
+}
+
+.item:hover {
+  background: #141417;
+  color: var(--text);
+}
+
+/* Thư mục: chữ đậm và sáng hơn để tách khỏi file ngay từ cái nhìn đầu tiên. */
+.dir {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.item:hover {
-  color: var(--text);
-  background: var(--surface);
-}
-
 .active,
 .active:hover {
-  color: var(--accent);
-  background: var(--accent-wash);
+  background: #161a0e;
   border-left-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
 }
 
-.caret {
-  width: 1ch;
+.guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-strong);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.spacer {
+  width: 12px;
+  flex: none;
+}
+
+.chevron {
+  flex: none;
+  color: var(--muted);
+  transition: transform 0.12s ease-out;
+}
+
+.chevron[data-open='true'] {
+  transform: rotate(90deg);
+}
+
+.folder {
+  flex: none;
+  fill: none;
+  stroke: var(--faint);
+}
+
+.folder[data-open='true'] {
+  fill: #2a2a30;
+  stroke: var(--muted);
+}
+
+.badge {
+  flex: none;
+  width: 20px;
+  height: 16px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.none {
+  margin: 0;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.5;
   color: var(--faint);
+  overflow-wrap: anywhere;
 }

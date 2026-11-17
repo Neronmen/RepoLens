@@ -10,10 +10,16 @@
   --text-2: #d4d4d8;
   --muted: #a1a1aa;
   --faint: #8a8a93;
+  --panel: #0d0d0f;
+  --card: #121214;
+  --card-head: #16161a;
+  --card-border: #2c2c32;
+  --bubble: #1d1d22;
+  --bubble-border: #3a3a42;
   --accent: #b6f23a;
   --accent-ink: #0a0a0b;
   --accent-wash: #14160e;
-  --accent-line: #3a4a1a;
+  --accent-line: #4e6a1e;
   --danger: #ff8a6b;
 
   --font-sans: 'Inter', system-ui, sans-serif;
