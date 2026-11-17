@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useI18n } from '../../i18n'
 import { api, ApiError } from '../../lib/api'
+import { fileBadge } from '../files/fileIcon'
 import styles from './CodeViewer.module.css'
 
 /** `highlight`: true khi mở từ một trích dẫn (tô sáng khoảng dòng), false khi mở từ cây file. */
@@ -30,6 +32,7 @@ export default function CodeViewer({
   target: CodeTarget | null
   onBack: () => void
 }) {
+  const { t } = useI18n()
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [more, setMore] = useState<'before' | 'after' | null>(null)
@@ -55,12 +58,12 @@ export default function CodeViewer({
       .catch((e: unknown) => {
         if (cancelled) return
         setLoaded(null)
-        setError(e instanceof ApiError ? e.message : 'Could not load this file.')
+        setError(e instanceof ApiError ? e.message : t('code.loadFail'))
       })
     return () => {
       cancelled = true
     }
-  }, [repoId, target])
+  }, [repoId, target, t])
 
   // Cuộn tới đoạn được trích dẫn đúng một lần cho mỗi lần mở.
   useEffect(() => {
@@ -76,7 +79,8 @@ export default function CodeViewer({
       setMore(dir)
       try {
         if (dir === 'after') {
-          const s = await api.readFile(repoId, target.path, loaded.first + loaded.lines.length, loaded.first + loaded.lines.length + WINDOW - 1)
+          const from = loaded.first + loaded.lines.length
+          const s = await api.readFile(repoId, target.path, from, from + WINDOW - 1)
           setLoaded((p) => (p ? { ...p, lines: [...p.lines, ...s.lines] } : p))
         } else {
           const start = Math.max(1, loaded.first - WINDOW)
@@ -84,46 +88,61 @@ export default function CodeViewer({
           setLoaded((p) => (p ? { ...p, first: start, lines: [...s.lines, ...p.lines] } : p))
         }
       } catch (e) {
-        setError(e instanceof ApiError ? e.message : 'Could not load more lines.')
+        setError(e instanceof ApiError ? e.message : t('code.moreFail'))
       } finally {
         setMore(null)
       }
     },
-    [repoId, target, loaded],
+    [repoId, target, loaded, t],
   )
 
   if (!target) {
     return (
       <div className={styles.viewer}>
-        <div className={styles.head}>
+        <div className={styles.tabs}>
           <button type="button" className={styles.back} onClick={onBack}>
-            ← Chat
+            {t('code.back')}
           </button>
         </div>
         <div className={styles.empty}>
-          <p>Pick a file, or click a citation in an answer, to read the code here.</p>
+          <p>{t('code.empty')}</p>
         </div>
       </div>
     )
   }
 
-  const dir = target.path.includes('/') ? target.path.slice(0, target.path.lastIndexOf('/') + 1) : ''
-  const file = target.path.slice(dir.length)
+  const parts = target.path.split('/')
+  const file = parts[parts.length - 1]
+  const badge = fileBadge(file)
   const hasCitation = target.highlight
   const width = String((loaded ? loaded.first + loaded.lines.length : 0) || 1).length
 
   return (
     <div className={styles.viewer}>
-      <div className={styles.head}>
+      {/* thanh tab giống VS Code: huy hiệu loại file và tên file đang mở */}
+      <div className={styles.tabs}>
         <button type="button" className={styles.back} onClick={onBack}>
-          ← Chat
+          {t('code.back')}
         </button>
+        <div className={styles.tab}>
+          <span className={styles.badge} style={{ background: badge.bg, color: badge.fg }} aria-hidden="true">
+            {badge.label}
+          </span>
+          <span className={styles.tabName}>{file}</span>
+        </div>
+      </div>
+
+      <div className={styles.crumbs}>
         <span className={styles.path} title={target.path}>
-          {dir}
+          {parts.slice(0, -1).map((p, i) => (
+            <span key={i}>
+              {p} <span className={styles.sep}>›</span>{' '}
+            </span>
+          ))}
           <b>{file}</b>
         </span>
         <a className={styles.gh} href={githubUrl(owner, name, target)} target="_blank" rel="noreferrer">
-          GitHub ↗
+          {t('code.github')}
         </a>
       </div>
 
@@ -133,13 +152,13 @@ export default function CodeViewer({
         </p>
       )}
 
-      {!loaded && !error && <p className={styles.loading}>Loading…</p>}
+      {!loaded && !error && <p className={styles.loading}>{t('code.loading')}</p>}
 
       {loaded && (
-        <div className={styles.code} role="region" aria-label={`Source of ${target.path}`} tabIndex={0}>
+        <div className={styles.code} role="region" aria-label={t('code.region', { path: target.path })} tabIndex={0}>
           {loaded.first > 1 && (
             <button type="button" className={styles.more} onClick={() => loadMore('before')} disabled={more !== null}>
-              {more === 'before' ? 'Loading…' : `Show earlier lines (1-${loaded.first - 1})`}
+              {more === 'before' ? t('code.loading') : t('code.earlier', { n: loaded.first - 1 })}
             </button>
           )}
           {loaded.lines.map((text, i) => {
@@ -161,8 +180,8 @@ export default function CodeViewer({
           {loaded.first + loaded.lines.length <= loaded.total && (
             <button type="button" className={styles.more} onClick={() => loadMore('after')} disabled={more !== null}>
               {more === 'after'
-                ? 'Loading…'
-                : `Show more lines (${loaded.first + loaded.lines.length}-${loaded.total})`}
+                ? t('code.loading')
+                : t('code.more', { from: loaded.first + loaded.lines.length, to: loaded.total })}
             </button>
           )}
         </div>

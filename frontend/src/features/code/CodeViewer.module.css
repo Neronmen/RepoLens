@@ -3,34 +3,80 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  background: #0c0c0e;
 }
 
-.head {
+/* Thanh tab giống VS Code: tab đang mở có vạch màu nhấn ở trên. */
+.tabs {
   flex: none;
-  min-height: 48px;
+  height: 44px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--panel);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.tab {
+  height: 44px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  padding: 0 16px;
+  background: #0c0c0e;
+  border-right: 1px solid var(--card-border);
+  border-top: 2px solid var(--accent);
+  font-size: 13px;
+  color: var(--text);
+  max-width: 100%;
+}
+
+.tabName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  flex: none;
+  width: 20px;
+  height: 16px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 8.5px;
+  font-weight: 600;
 }
 
 .back {
   display: none;
   min-height: 44px;
-  padding: 0;
+  padding: 0 16px;
   border: 0;
   background: transparent;
   color: var(--accent);
   font: inherit;
+  font-size: 13px;
+}
+
+.crumbs {
+  flex: none;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 12px;
 }
 
 .path {
   flex: 1;
   min-width: 0;
-  color: var(--muted);
+  color: var(--faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -41,6 +87,10 @@
 .path b {
   color: var(--text);
   font-weight: 500;
+}
+
+.sep {
+  color: #52525b;
 }
 
 .gh {
@@ -81,12 +131,13 @@
 
 .text {
   white-space: pre;
-  color: var(--text-2);
+  color: #b4b4bc;
   padding-right: 24px;
 }
 
+/* Các dòng được trích dẫn: nền sáng, vạch màu nhấn bên trái, chữ trắng. */
 .hit {
-  background: var(--accent-wash);
+  background: #14180d;
   border-left-color: var(--accent);
 }
 
@@ -95,7 +146,7 @@
 }
 
 .hit .text {
-  color: var(--text);
+  color: #fff;
 }
 
 .more {
