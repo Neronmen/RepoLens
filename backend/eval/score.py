@@ -66,8 +66,11 @@ def summarize(results: list[Result]) -> dict[str, Any]:
     ok = [r for r in results if r.error is None]
     cites_total = sum(r.citations_total for r in ok)
     cites_valid = sum(r.citations_valid for r in ok)
-    answerable = [r for r in ok if r.answerable]
-    refusals = [r for r in ok if not r.answerable]
+    # Tỉ lệ đạt tính trên TẤT CẢ câu hỏi: câu bị lỗi (hết lượt, model báo lỗi) là một câu
+    # người dùng không nhận được câu trả lời, nên phải tính là trượt. Loại nó ra khỏi
+    # mẫu số sẽ làm điểm đẹp hơn thực tế.
+    answerable = [r for r in results if r.answerable]
+    refusals = [r for r in results if not r.answerable]
 
     def pct(a: int, b: int) -> float | None:
         return round(100 * a / b, 1) if b else None
@@ -75,7 +78,7 @@ def summarize(results: list[Result]) -> dict[str, Any]:
     return {
         "questions": len(results),
         "errors": len(results) - len(ok),
-        "pass_rate": pct(sum(r.passed for r in ok), len(ok)),
+        "pass_rate": pct(sum(r.passed for r in results), len(results)),
         "answerable_pass_rate": pct(sum(r.passed for r in answerable), len(answerable)),
         "honest_refusal_rate": pct(sum(r.passed for r in refusals), len(refusals)),
         "citation_validity": pct(cites_valid, cites_total),

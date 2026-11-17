@@ -88,9 +88,11 @@ def test_tong_hop_so_lieu():
     assert s["mean_tokens"] == 200
 
 
-def test_cau_loi_khong_bi_tinh_la_truot_hay_dat():
+def test_cau_bi_loi_tinh_la_truot_chu_khong_bi_loai_khoi_mau_so():
+    # loại câu lỗi ra khỏi mẫu số sẽ báo 100% trong khi người dùng không nhận được 1/2 câu trả lời
     s = summarize([r(id="a", passed=True), r(id="b", passed=False, error="boom")])
-    assert s["errors"] == 1 and s["pass_rate"] == 100.0
+    assert s["errors"] == 1 and s["pass_rate"] == 50.0
+    assert s["answerable_pass_rate"] == 50.0
 
 
 def test_tong_hop_khi_khong_co_gi():
