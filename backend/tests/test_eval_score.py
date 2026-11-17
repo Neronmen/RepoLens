@@ -48,6 +48,19 @@ def test_cau_hoi_khong_co_dap_an_dat_khi_noi_khong_tim_thay():
         assert judge(q, text, [])[0], text
 
 
+def test_nhan_cac_cach_tu_choi_bang_tieng_viet_thuong_gap():
+    # hai câu trả lời thật của agent ở lượt chạy đầu, bị chấm trượt oan vì bộ chấm quá hẹp
+    q = {"id": "n", "answerable": False}
+    assert judge(q, "Thư viện itsdangerous không kết nối với cơ sở dữ liệu PostgreSQL.", [])[0]
+    assert judge(q, "Thư viện này **không** triển khai quy trình đăng nhập OAuth2.".replace("**", ""), [])[0]
+
+
+def test_bo_cham_khong_bi_qua_de_dai_voi_cau_tra_loi_khang_dinh():
+    q = {"id": "n", "answerable": False}
+    assert not judge(q, "Thư viện kết nối PostgreSQL qua hàm connect() trong db.py.", [])[0]
+    assert not judge(q, "OAuth2 được triển khai trong auth.py bằng cách gọi authorize().", [])[0]
+
+
 def test_cau_hoi_khong_co_dap_an_truot_khi_bia_ra_cau_tra_loi():
     q = {"id": "n", "answerable": False}
     ok, why = judge(q, "It connects via psycopg2 in db.py using a connection pool.", [cite("db.py")])

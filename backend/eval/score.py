@@ -15,7 +15,10 @@ NOT_FOUND = re.compile(
     r"no (such|mention|evidence|code|reference|trace|database|oauth|support)|"
     r"(doesn't|does not|do not|don't|did not|didn't|isn't|is not|aren't|are not|cannot|can't|couldn't|could not) "
     r"(appear|exist|contain|include|have|connect|implement|find|support|use|provide|seem|handle|perform|any)|"
-    r"does not seem|không (tìm thấy|có|thấy|hỗ trợ)|chưa (tìm|thấy)|unable to find|nothing (about|related|in)",
+    r"does not seem|unable to find|nothing (about|related|in)|"
+    # cách nói "không có" thường gặp bằng tiếng Việt, ví dụ "không kết nối", "không triển khai"
+    r"không (tìm thấy|có|thấy|hỗ trợ|kết nối|triển khai|sử dụng|liên quan|đề cập|bao gồm|chứa|dùng|cài đặt|xử lý)|"
+    r"chưa (tìm|thấy|có|hỗ trợ)",
     re.IGNORECASE,
 )
 
