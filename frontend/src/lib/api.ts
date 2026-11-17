@@ -1,5 +1,7 @@
 /** Gọi backend. Mọi thứ về hình dạng dữ liệu trả về nằm ở file này. */
 
+import { getLang, translate } from '../i18n'
+
 export const API_BASE: string = import.meta.env.VITE_API_URL ?? ''
 
 export type Repo = {
@@ -34,22 +36,26 @@ export class ApiError extends Error {
   }
 }
 
-/** FastAPI trả `detail` là chuỗi (lỗi mình tự ném) hoặc mảng (lỗi kiểm tra dữ liệu). */
+/** Header báo cho server biết người dùng đang dùng ngôn ngữ nào, để thông báo lỗi đúng tiếng. */
+export function langHeaders(): Record<string, string> {
+  return { 'X-Lang': getLang() }
+}
+
+/** FastAPI trả `detail` là chuỗi (lỗi mình tự ném, đã đúng ngôn ngữ) hoặc mảng (lỗi kiểm tra dữ liệu). */
 function readDetail(body: unknown, status: number): string {
   const detail = (body as { detail?: unknown } | null)?.detail
   if (typeof detail === 'string') return detail
-  if (status === 422) return 'Dữ liệu gửi lên không hợp lệ.'
-  return 'Có lỗi xảy ra, thử lại sau nhé.'
+  return translate(getLang(), status === 422 ? 'error.validation' : 'error.generic')
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let res: Response
   try {
-    res = await fetch(`${API_BASE}${path}`, init)
+    res = await fetch(`${API_BASE}${path}`, { ...init, headers: { ...langHeaders(), ...init.headers } })
   } catch (e) {
     // bị chủ động hủy (đổi trang giữa chừng) thì không phải lỗi mạng
-    if (init?.signal?.aborted) throw e
-    throw new ApiError(0, 'Không kết nối được tới server. Kiểm tra mạng rồi thử lại nhé.')
+    if (init.signal?.aborted) throw e
+    throw new ApiError(0, translate(getLang(), 'error.network'))
   }
   if (!res.ok) {
     const body = await res.json().catch(() => null)

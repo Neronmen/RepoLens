@@ -3,7 +3,8 @@
  * Không dùng `EventSource` có sẵn của trình duyệt vì nó chỉ gửi được GET,
  * còn mình cần gửi câu hỏi và lịch sử trong body của POST.
  */
-import { API_BASE } from './api'
+import { getLang, translate } from '../i18n'
+import { API_BASE, langHeaders } from './api'
 
 export type Citation = {
   path: string
@@ -62,18 +63,18 @@ export async function streamAsk(
   try {
     res = await fetch(`${API_BASE}/api/repos/${repoId}/ask`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...langHeaders() },
       body: JSON.stringify(body),
       signal,
     })
   } catch (e) {
     if (signal.aborted) return
-    throw new Error('Không kết nối được tới server. Kiểm tra mạng rồi thử lại nhé.', { cause: e })
+    throw new Error(translate(getLang(), 'error.network'), { cause: e })
   }
 
   if (!res.ok || !res.body) {
     const detail = await res.json().then((b) => b?.detail).catch(() => null)
-    throw new Error(typeof detail === 'string' ? detail : 'Có lỗi xảy ra, thử lại sau nhé.')
+    throw new Error(typeof detail === 'string' ? detail : translate(getLang(), 'error.generic'))
   }
 
   const reader = res.body.getReader()
@@ -94,6 +95,6 @@ export async function streamAsk(
     }
   } catch (e) {
     if (signal.aborted) return
-    throw new Error('Kết nối bị ngắt giữa chừng, thử lại nhé.', { cause: e })
+    throw new Error(translate(getLang(), 'error.cut'), { cause: e })
   }
 }

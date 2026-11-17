@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { setLang } from '../i18n'
 import { parseBlock, streamAsk, type AgentEvent } from './sse'
 
 describe('parseBlock', () => {
@@ -63,6 +64,19 @@ describe('streamAsk', () => {
     expect(events).toEqual([{ type: 'token', data: { step: 1, text: 'ệ' } }])
   })
 
+  it('gửi kèm ngôn ngữ đang chọn để server trả thông báo đúng tiếng', async () => {
+    // mỗi lần gọi một luồng mới: một Response chỉ đọc được một lần
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(streamFrom(['event: done\ndata: {}\n\n'])))
+    vi.stubGlobal('fetch', fetchMock)
+    for (const lang of ['vi', 'en'] as const) {
+      setLang(lang)
+      await streamAsk(1, { question: 'x', history: [] }, () => {}, new AbortController().signal)
+    }
+    const sent = fetchMock.mock.calls.map((c) => (c[1] as RequestInit).headers as Record<string, string>)
+    expect(sent.map((h) => h['X-Lang'])).toEqual(['vi', 'en'])
+    expect(sent[0]['Content-Type']).toBe('application/json')
+  })
+
   it('chịu được xuống dòng kiểu Windows', async () => {
     const events = await collect(['event: done\r\ndata: {}\r\n\r\n'])
     expect(events.map((e) => e.type)).toEqual(['done'])
@@ -80,9 +94,15 @@ describe('streamAsk', () => {
 
   it('mất mạng thì báo lỗi thân thiện, còn bị chủ động huỷ thì im lặng', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    // thông báo lỗi do chính trình duyệt tạo ra phải đúng ngôn ngữ đang chọn
+    setLang('vi')
     await expect(
       streamAsk(1, { question: 'x', history: [] }, () => {}, new AbortController().signal),
     ).rejects.toThrow('Không kết nối được')
+    setLang('en')
+    await expect(
+      streamAsk(1, { question: 'x', history: [] }, () => {}, new AbortController().signal),
+    ).rejects.toThrow('Could not reach the server')
 
     const ctrl = new AbortController()
     ctrl.abort()
