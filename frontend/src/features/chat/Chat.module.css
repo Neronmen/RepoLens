@@ -133,7 +133,7 @@
 }
 
 .empty {
-  margin: auto 0;
+  margin: auto; /* auto cả hai chiều: nằm giữa khung theo cả bề ngang lẫn bề dọc */
   padding: 24px 0;
 }
 
@@ -254,7 +254,7 @@
 }
 
 .keys {
-  margin: 8px 0 0;
+  margin: 8px auto 0; /* auto hai bên để thẳng hàng với ô nhập */
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--faint);
