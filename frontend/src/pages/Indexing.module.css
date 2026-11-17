@@ -233,3 +233,10 @@
 .other:hover {
   border-color: var(--accent);
 }
+
+.slow {
+  margin: 14px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}

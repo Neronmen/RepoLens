@@ -105,6 +105,7 @@ export default function Indexing() {
               <p className={styles.time} aria-live="polite">
                 {done ? t('index.ready') : t('index.elapsed', { n: seconds })}
               </p>
+              {!done && seconds >= 10 && <p className={styles.slow}>{t('index.slow')}</p>}
             </>
           )}
         </div>

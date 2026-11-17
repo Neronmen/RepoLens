@@ -66,6 +66,7 @@ export default function RepoPage() {
 function Workspace({ repo, files }: Loaded) {
   const { t } = useI18n()
   const { turns, busy, ask, stop } = useAsk(repo.id)
+  const semantic = useSemanticReady(repo)
   const [panel, setPanel] = useState<Panel>('chat')
   const [code, setCode] = useState<CodeTarget | null>(null)
 
@@ -103,6 +104,12 @@ function Workspace({ repo, files }: Loaded) {
             {repo.owner}/<b>{repo.name}</b>
           </span>
           <span className={styles.pill}>{t('topbar.counts', { files: repo.file_count, chunks: repo.chunk_count })}</span>
+          <span
+            className={`${styles.pill} ${semantic ? styles.pillOn : ''}`}
+            title={semantic ? t('topbar.semanticTitle') : t('topbar.keywordTitle')}
+          >
+            {semantic ? t('topbar.semantic') : t('topbar.keywordOnly')}
+          </span>
         </div>
         <div className={styles.barRight}>
           {totals.input > 0 && (
@@ -148,6 +155,27 @@ function Workspace({ repo, files }: Loaded) {
       </div>
     </div>
   )
+}
+
+/** Vector được tạo ở nền sau khi lập chỉ mục, nên hỏi lại vài lần cho tới khi xong. */
+function useSemanticReady(repo: Repo): boolean {
+  const [ready, setReady] = useState(Boolean(repo.semantic))
+  useEffect(() => {
+    if (ready) return
+    let tries = 0
+    const timer = window.setInterval(() => {
+      tries += 1
+      api
+        .getRepo(repo.id)
+        .then((r) => {
+          if (r.semantic) setReady(true)
+        })
+        .catch(() => {})
+      if (tries >= 12) window.clearInterval(timer) // một phút không xong thì thôi, không hỏi mãi
+    }, 5000)
+    return () => window.clearInterval(timer)
+  }, [repo.id, ready])
+  return ready
 }
 
 function Problem({ message }: { message: string }) {

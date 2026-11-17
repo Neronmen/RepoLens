@@ -208,3 +208,8 @@
     display: none;
   }
 }
+
+.pillOn {
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
