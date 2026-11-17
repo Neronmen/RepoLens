@@ -13,6 +13,7 @@ from collections.abc import Callable
 from fastapi import HTTPException, Request
 
 from app.config import get_settings
+from app.i18n import Msg
 
 _MAX_TRACKED_KEYS = 10_000
 
@@ -58,7 +59,12 @@ class RateLimiter:
         if wait is not None:
             raise HTTPException(
                 status_code=429,
-                detail="Bạn đã dùng hết lượt miễn phí trong giờ này, hãy quay lại sau nhé.",
+                detail=str(
+                    Msg(
+                        "Bạn đã dùng hết lượt miễn phí trong giờ này, hãy quay lại sau nhé.",
+                        "You've used up your free requests for this hour, please come back later.",
+                    )
+                ),
                 headers={"Retry-After": str(int(wait))},
             )
 

@@ -6,6 +6,7 @@ import zlib
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
+from app.i18n import Msg
 from app.ingest.chunker import chunk_text, split_lines
 from app.ingest.github import RepoError
 
@@ -78,7 +79,9 @@ def read_source_files(zip_bytes: bytes) -> tuple[list[tuple[str, str, str]], int
     # trước khi mở zip, vì `ZipFile` dựng object cho mọi entry ngay lúc mở và
     # một zip có vài trăm nghìn file tí hon sẽ ngốn hết RAM của server free.
     if zip_bytes.count(b"PK\x01\x02") > MAX_ZIP_ENTRIES:
-        raise RepoError("Repo này có quá nhiều file, hiện chưa hỗ trợ.")
+        raise RepoError(
+            Msg("Repo này có quá nhiều file, hiện chưa hỗ trợ.", "This repo has too many files and is not supported yet.")
+        )
 
     files: list[tuple[str, str, str]] = []
     seen: set[str] = set()
@@ -107,7 +110,9 @@ def read_source_files(zip_bytes: bytes) -> tuple[list[tuple[str, str, str]], int
                 # server giải nén hàng GB dữ liệu rác mà không bị chặn
                 unpacked += len(raw)
                 if unpacked > MAX_UNPACKED_BYTES:
-                    raise RepoError("Repo này lớn quá, hiện chưa hỗ trợ.")
+                    raise RepoError(
+                        Msg("Repo này lớn quá, hiện chưa hỗ trợ.", "This repo is too large and is not supported yet.")
+                    )
 
                 if len(raw) > MAX_FILE_BYTES or b"\x00" in raw:
                     skipped += 1
@@ -123,7 +128,12 @@ def read_source_files(zip_bytes: bytes) -> tuple[list[tuple[str, str, str]], int
                 files.append((str(path), detect_language(path), text))
     except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError, EOFError) as e:
         # zip hỏng, sai CRC, kiểu nén lạ hoặc có mật khẩu
-        raise RepoError("File tải về từ GitHub bị hỏng, thử lại nhé.") from e
+        raise RepoError(
+            Msg(
+                "File tải về từ GitHub bị hỏng, thử lại nhé.",
+                "The file downloaded from GitHub is corrupted, please try again.",
+            )
+        ) from e
     return files, skipped
 
 
@@ -140,7 +150,12 @@ def _delete_contents(conn: sqlite3.Connection, repo_id: int) -> None:
 def index_repo(conn: sqlite3.Connection, owner: str, name: str, zip_bytes: bytes) -> IndexStats:
     files, skipped = read_source_files(zip_bytes)
     if not files:
-        raise RepoError("Không tìm thấy file code nào đọc được trong repo này.")
+        raise RepoError(
+            Msg(
+                "Không tìm thấy file code nào đọc được trong repo này.",
+                "No readable source files were found in this repo.",
+            )
+        )
 
     # `with conn` gói tất cả vào một transaction: hỏng giữa chừng thì không lưu dở dang
     with conn:

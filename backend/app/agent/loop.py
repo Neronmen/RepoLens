@@ -13,6 +13,7 @@ from typing import Any
 
 from app.agent.citations import check_citations
 from app.agent.tools import TOOLS, ToolOutput, execute_tool
+from app.i18n import Msg
 from app.providers.base import LLMProvider, Message, ToolResult, Usage
 
 log = logging.getLogger("repolens.agent")
@@ -172,12 +173,17 @@ async def run_agent(
     if answer.strip():
         yield AgentEvent("citations", {"items": check_citations(conn, repo_id, answer, read_paths)})
     elif ran_out:
-        yield AgentEvent("error", {
-            "message": "Mình đã tìm hết số lượt cho phép mà chưa ra câu trả lời. "
-            "Bạn thử hỏi cụ thể hơn, ví dụ nêu tên file hoặc hàm nhé."
-        })
+        yield AgentEvent("error", {"message": str(Msg(
+            "Mình đã tìm hết số lượt cho phép mà chưa ra câu trả lời. "
+            "Bạn thử hỏi cụ thể hơn, ví dụ nêu tên file hoặc hàm nhé.",
+            "I used up all my search steps without reaching an answer. "
+            "Try asking more specifically, for example by naming a file or function.",
+        ))})
     else:
-        yield AgentEvent("error", {"message": "Model không đưa ra được câu trả lời, bạn thử hỏi lại nhé."})
+        yield AgentEvent("error", {"message": str(Msg(
+            "Model không đưa ra được câu trả lời, bạn thử hỏi lại nhé.",
+            "The model did not produce an answer, please try again.",
+        ))})
 
     yield AgentEvent("usage", {
         "input_tokens": total.input_tokens,

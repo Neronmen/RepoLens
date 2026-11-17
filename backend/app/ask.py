@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from app.agent.loop import run_agent
 from app.config import get_settings
 from app.db import connect
+from app.i18n import REPO_NOT_FOUND, Msg
 from app.providers import build_provider
 from app.providers.base import LLMProvider, Message, ModelOverloaded, RateLimited
 from app.ratelimit import ask_limiter
@@ -51,7 +52,15 @@ def get_provider() -> LLMProvider:
         # thiếu GEMINI_API_KEY: báo cho người dùng biết server chưa sẵn sàng
         # thay vì để lộ ra thành lỗi 500 trống trơn
         log.error("Không tạo được provider: %s", e)
-        raise HTTPException(status_code=503, detail="Server chưa được cấu hình khóa API cho model.") from e
+        raise HTTPException(
+            status_code=503,
+            detail=str(
+                Msg(
+                    "Server chưa được cấu hình khóa API cho model.",
+                    "The server has no API key configured for the model.",
+                )
+            ),
+        ) from e
 
 
 def get_db_path() -> Path:
@@ -93,13 +102,21 @@ async def _stream(
         ):
             yield sse(ev.type, ev.data)
     except RateLimited:
-        yield sse("error", {"message": "Model đang quá tải hoặc đã hết lượt miễn phí, đợi một chút rồi hỏi lại nhé."})
+        yield sse("error", {"message": str(Msg(
+            "Model đang quá tải hoặc đã hết lượt miễn phí, đợi một chút rồi hỏi lại nhé.",
+            "The model is overloaded or the free quota is used up, wait a moment and ask again.",
+        ))})
     except ModelOverloaded:
-        yield sse("error", {"message": "Model đang bận, thử lại sau ít phút nhé."})
+        yield sse("error", {"message": str(Msg(
+            "Model đang bận, thử lại sau ít phút nhé.", "The model is busy, please try again in a few minutes."
+        ))})
     except Exception:
         # log chi tiết ở server, chỉ nói chung chung cho client
         log.exception("Lỗi khi chạy agent")
-        yield sse("error", {"message": "Có lỗi khi xử lý câu hỏi, thử lại sau nhé."})
+        yield sse("error", {"message": str(Msg(
+            "Có lỗi khi xử lý câu hỏi, thử lại sau nhé.",
+            "Something went wrong while handling your question, please try again.",
+        ))})
     finally:
         # Kết nối được mở ở endpoint và đóng ở đây, vì phải sống suốt lúc stream.
         # `finally` cũng chạy khi người dùng đóng tab giữa chừng.
@@ -122,7 +139,7 @@ async def ask(
         raise
     if repo is None:
         conn.close()
-        raise HTTPException(status_code=404, detail="Chưa có repo này, hãy thêm nó trước.")
+        raise HTTPException(status_code=404, detail=str(REPO_NOT_FOUND))
     return StreamingResponse(
         _stream(provider, conn, repo, req),
         media_type="text/event-stream",

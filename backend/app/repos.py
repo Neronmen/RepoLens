@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.db import get_db, search_chunks
+from app.i18n import REPO_NOT_FOUND, Msg
 from app.ingest.chunker import split_lines
 from app.ingest.github import RepoError, download_zip, parse_repo_url
 from app.ingest.service import index_repo
@@ -35,7 +36,7 @@ class AddRepoRequest(BaseModel):
 def _require_repo(conn: sqlite3.Connection, repo_id: int) -> sqlite3.Row:
     row = conn.execute("SELECT * FROM repos WHERE id = ?", (repo_id,)).fetchone()
     if row is None:
-        raise HTTPException(status_code=404, detail="Chưa có repo này, hãy thêm nó trước.")
+        raise HTTPException(status_code=404, detail=str(REPO_NOT_FOUND))
     return row
 
 
@@ -57,7 +58,12 @@ def add_repo(
     if not _ingest_slot.acquire(blocking=False):
         raise HTTPException(
             status_code=429,
-            detail="Server đang lập chỉ mục một repo khác, đợi chút rồi thử lại nhé.",
+            detail=str(
+                Msg(
+                    "Server đang lập chỉ mục một repo khác, đợi chút rồi thử lại nhé.",
+                    "The server is indexing another repo, wait a moment and try again.",
+                )
+            ),
             headers={"Retry-After": "15"},
         )
     try:
@@ -67,7 +73,10 @@ def add_repo(
     except sqlite3.OperationalError as e:
         # thường là "database is locked" khi có tiến trình khác đang ghi
         log.warning("Không ghi được database: %s", e)
-        raise HTTPException(status_code=503, detail="Server đang bận, thử lại sau nhé.") from e
+        raise HTTPException(
+            status_code=503,
+            detail=str(Msg("Server đang bận, thử lại sau nhé.", "The server is busy, please try again later.")),
+        ) from e
     finally:
         _ingest_slot.release()
     return {
@@ -111,11 +120,16 @@ def read_file(
         (repo_id, path),
     ).fetchone()
     if row is None:
-        raise HTTPException(status_code=404, detail="Không có file này trong repo.")
+        raise HTTPException(
+            status_code=404, detail=str(Msg("Không có file này trong repo.", "That file isn't in this repo."))
+        )
 
     lines = split_lines(row["content"])
     if start > len(lines):
-        raise HTTPException(status_code=416, detail=f"File chỉ có {len(lines)} dòng.")
+        raise HTTPException(
+            status_code=416,
+            detail=str(Msg("File chỉ có {n} dòng.", "The file only has {n} lines.", n=len(lines))),
+        )
     # giới hạn số dòng mỗi lần để một request không kéo về cả file khổng lồ
     last = min(end or start + MAX_FILE_WINDOW - 1, start + MAX_FILE_WINDOW - 1, len(lines))
     last = max(last, start)
