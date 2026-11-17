@@ -20,7 +20,10 @@ from app.providers.base import RateLimited
 from eval.score import Result, judge, render_markdown, summarize
 
 HERE = Path(__file__).parent
-PAUSE_SECONDS = 5  # nghỉ giữa các câu để không dội quá nhiều request vào gói miễn phí
+PAUSE_SECONDS = 8  # nghỉ giữa các câu để không dội quá nhiều request vào gói miễn phí
+RETRY_WAIT_SECONDS = 65  # hạn mức miễn phí tính theo phút, chờ hơn một phút là được cấp lại
+RETRIES = 4
+RATE_LIMITED = "rate limited by the model provider"
 
 
 async def ask_once(provider, conn, repo_id: int, label: str, question: dict) -> Result:
@@ -44,7 +47,7 @@ async def ask_once(provider, conn, repo_id: int, label: str, question: dict) -> 
             elif ev.type == "error":
                 result.error = ev.data["message"]
     except RateLimited:
-        result.error = "rate limited by the model provider"
+        result.error = RATE_LIMITED
     except Exception as e:  # noqa: BLE001  một câu lỗi không được làm hỏng cả lượt chạy
         result.error = f"{type(e).__name__}: {e}"
 
@@ -54,6 +57,18 @@ async def ask_once(provider, conn, repo_id: int, label: str, question: dict) -> 
     if result.error is None:
         result.passed, result.reasons = judge(question, answer, citations)
     return result
+
+
+async def ask_with_retry(provider, conn, repo_id: int, label: str, question: dict) -> Result:
+    """Gói miễn phí hay báo hết lượt trong phút. Chờ rồi thử lại, vì câu bị chặn tốc độ
+    không phải câu trả lời sai và không nên bị tính vào điểm."""
+    for attempt in range(1, RETRIES + 1):
+        result = await ask_once(provider, conn, repo_id, label, question)
+        if result.error != RATE_LIMITED or attempt == RETRIES:
+            return result
+        print(f"    rate limited, waiting {RETRY_WAIT_SECONDS}s (attempt {attempt}/{RETRIES})", flush=True)
+        await asyncio.sleep(RETRY_WAIT_SECONDS)
+    return result  # pragma: no cover
 
 
 async def main() -> int:
@@ -70,7 +85,7 @@ async def main() -> int:
     results: list[Result] = []
     questions = dataset["questions"]
     for i, q in enumerate(questions, start=1):
-        r = await ask_once(provider, conn, stats.repo_id, f"{owner}/{name}", q)
+        r = await ask_with_retry(provider, conn, stats.repo_id, f"{owner}/{name}", q)
         results.append(r)
         status = "ERROR" if r.error else ("pass" if r.passed else "FAIL")
         print(f"[{i}/{len(questions)}] {q['id']:<20} {status}  {r.ms / 1000:.1f}s  {r.error or '; '.join(r.reasons)}", flush=True)
