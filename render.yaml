@@ -16,3 +16,9 @@ services:
         sync: false # địa chỉ frontend trên Vercel, ví dụ https://repolens.vercel.app
       - key: TRUST_PROXY
         value: "true" # Render đứng trước app, IP thật nằm ở X-Forwarded-For
+      - key: DATABASE_URL
+        sync: false # chuỗi kết nối Postgres miễn phí (Neon/Supabase), để lưu tài khoản và lịch sử chat
+      - key: GOOGLE_CLIENT_ID
+        sync: false # OAuth client id (loại Web) tạo ở Google Cloud Console
+      - key: SESSION_SECRET
+        generateValue: true # Render tự sinh chuỗi ngẫu nhiên để ký phiên đăng nhập

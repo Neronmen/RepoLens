@@ -101,11 +101,12 @@ ask_limiter = RateLimiter(lambda: get_settings().ask_limit_per_hour)
 index_limiter = RateLimiter(lambda: get_settings().index_limit_per_hour)
 
 
+login_limiter = RateLimiter(lambda: 30)
 read_limiter = RateLimiter(lambda: get_settings().read_limit_per_hour)
 ask_global = GlobalLimiter(lambda: get_settings().ask_global_per_hour)
 index_global = GlobalLimiter(lambda: get_settings().index_global_per_hour)
 
 
 def reset_all() -> None:
-    for limiter in (ask_limiter, index_limiter, read_limiter, ask_global, index_global):
+    for limiter in (login_limiter, ask_limiter, index_limiter, read_limiter, ask_global, index_global):
         limiter.reset()

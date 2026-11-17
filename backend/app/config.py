@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     index_global_per_hour: int = 60
     # Trang tài liệu API tự sinh (/docs) chỉ bật khi phát triển.
     enable_docs: bool = False
+
+    # Tài khoản và lịch sử chat. Máy dev dùng một file SQLite; bản deploy đặt DATABASE_URL
+    # trỏ tới Postgres miễn phí (Neon, Supabase) vì đĩa của server free bị xóa khi khởi động lại.
+    database_url: str = f"sqlite:///{(ROOT_DIR / 'data' / 'accounts.sqlite').as_posix()}"
+    google_client_id: str = ""  # để trống thì tắt tính năng đăng nhập
+    session_secret: str = ""  # khóa ký phiên đăng nhập, bản deploy bắt buộc phải đặt
+    session_days: int = 30
     # Bật khi chạy sau reverse proxy (Render...) để lấy IP thật từ X-Forwarded-For.
     trust_proxy: bool = False
 
