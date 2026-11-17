@@ -86,7 +86,16 @@ export default function Indexing() {
       <div className={styles.grid}>
         <div className={styles.left}>
           <p className={styles.eyebrow}>{state.status === 'error' ? t('index.eyebrowError') : t('index.eyebrow')}</p>
-          <h1 className={styles.title}>{repo}</h1>
+          <h1 className={styles.title}>
+            {/* gợi ý chỗ ngắt dòng ở dấu "/" để tên repo không bị bẻ giữa chữ */}
+            {repo.split('/').map((part, i) => (
+              <span key={i}>
+                {i > 0 && <wbr />}
+                {i > 0 && '/'}
+                {part}
+              </span>
+            ))}
+          </h1>
           {state.status === 'error' ? (
             <Problem message={state.message} retryable={state.retryable} />
           ) : (

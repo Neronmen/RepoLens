@@ -15,3 +15,8 @@ def _reset_rate_limits():
 def _no_real_embeddings(monkeypatch):
     # test không được gọi API thật dù máy có GEMINI_API_KEY trong .env
     monkeypatch.setattr("app.embeddings.get_embedder", lambda: None)
+
+
+@pytest.fixture(autouse=True)
+def _no_pause_between_embedding_batches(monkeypatch):
+    monkeypatch.setattr("app.embeddings.BATCH_PAUSE", 0)

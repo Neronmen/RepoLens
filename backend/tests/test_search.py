@@ -102,3 +102,13 @@ def test_vector_nhan_gui_di_dung_loai(monkeypatch):
     monkeypatch.setattr(embeddings, "get_embedder", lambda: Spy())
     search.hybrid_search(conn, repo_id, "forgery", mode="vector")
     assert seen == [False, True]
+
+
+def test_embed_chia_lo_va_nghi_giua_cac_lo(monkeypatch):
+    conn, repo_id = _repo()
+    monkeypatch.setattr(embeddings, "BATCH_SIZE", 1)
+    pauses = []
+    monkeypatch.setattr(embeddings.time, "sleep", pauses.append)
+    monkeypatch.setattr(embeddings, "BATCH_PAUSE", 7.0)
+    assert embeddings.embed_repo(conn, repo_id, FakeEmbedder()) == 2
+    assert pauses == [7.0]  # hai lô thì chỉ nghỉ một lần, ở giữa

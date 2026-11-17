@@ -20,10 +20,13 @@ from app.config import get_settings
 log = logging.getLogger("repolens.embeddings")
 
 DIMENSIONS = 256  # đủ để phân biệt đoạn code, và vector nhỏ nên SQLite nhẹ
-BATCH_SIZE = 100  # giới hạn của API cho mỗi lần gọi
-MAX_EMBED_CHUNKS = 1500  # trần để một repo lớn không ngốn hết hạn mức miễn phí
+# Gói miễn phí cho khoảng 100 đoạn mỗi phút, và mỗi đoạn trong một lô đều bị tính riêng.
+# Nên gửi lô 50 đoạn và nghỉ giữa các lô; 600 đoạn tốn khoảng 6 phút chạy nền.
+BATCH_SIZE = 50
+BATCH_PAUSE = 32.0
+MAX_EMBED_CHUNKS = 600  # repo lớn hơn thì chỉ phần đầu có vector, phần còn lại vẫn tìm bằng từ khóa
 MAX_TEXT_CHARS = 2000
-RETRY_DELAYS = (3.0, 15.0)
+RETRY_DELAYS = (5.0, 35.0, 35.0)  # 429 thường kèm "thử lại sau ~30 giây"
 
 
 class Embedder(Protocol):
@@ -102,6 +105,8 @@ def embed_repo(conn: sqlite3.Connection, repo_id: int, embedder: Embedder | None
     ).fetchall()
     done = 0
     for i in range(0, len(rows), BATCH_SIZE):
+        if i:
+            time.sleep(BATCH_PAUSE)  # giữ dưới hạn mức theo phút
         batch = rows[i : i + BATCH_SIZE]
         try:
             vecs = embedder.embed([_doc_text(r["path"], r["text"]) for r in batch], query=False)

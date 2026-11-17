@@ -19,3 +19,7 @@ data/
 *.sqlite
 *.db
 .DS_Store
+
+# log chạy bộ đánh giá
+eval-*.log
+*.log

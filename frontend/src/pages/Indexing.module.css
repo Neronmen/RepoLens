@@ -53,7 +53,7 @@
   font-size: clamp(32px, 6vw, 52px);
   line-height: 1.04;
   letter-spacing: -0.03em;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word; /* chỉ bẻ giữa chữ khi một chữ dài hơn cả khung */
 }
 
 .lead {
