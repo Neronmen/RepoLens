@@ -20,3 +20,8 @@ def _no_real_embeddings(monkeypatch):
 @pytest.fixture(autouse=True)
 def _no_pause_between_embedding_batches(monkeypatch):
     monkeypatch.setattr("app.embeddings.BATCH_PAUSE", 0)
+
+
+@pytest.fixture(autouse=True)
+def _no_agent_retry_wait(monkeypatch):
+    monkeypatch.setattr("app.agent.loop.STEP_RETRY_DELAY", 0)
