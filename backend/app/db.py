@@ -1,7 +1,8 @@
 """Lưu repo đã lập chỉ mục vào SQLite và tìm kiếm bằng FTS5.
 
 Mình chọn SQLite vì deploy miễn phí rất dễ (một file, không cần server riêng),
-và FTS5 có sẵn bm25 để xếp hạng kết quả nên chưa cần đến vector database.
+và FTS5 có sẵn bm25 để xếp hạng kết quả. Tìm theo nghĩa (embedding) nằm ở
+embeddings.py và search.py, vector cũng lưu trong chính file SQLite này.
 """
 import re
 import sqlite3
@@ -48,6 +49,15 @@ CREATE INDEX IF NOT EXISTS idx_chunks_file ON chunks(file_id);
 -- rowid của bảng FTS chính là chunks.id, nhờ vậy xóa và join đều nhanh
 -- tokenizer mặc định tách ở dấu gạch dưới, nên login_user khớp được với "login"
 CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(text, path);
+
+-- vector của từng đoạn (float32 đóng gói), phục vụ tìm theo nghĩa.
+-- Xóa chunks thì vector tự mất theo, nên không phải dọn tay.
+CREATE TABLE IF NOT EXISTS chunk_vectors (
+    chunk_id INTEGER PRIMARY KEY REFERENCES chunks(id) ON DELETE CASCADE,
+    repo_id  INTEGER NOT NULL,
+    vec      BLOB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vectors_repo ON chunk_vectors(repo_id);
 """
 
 

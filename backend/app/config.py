@@ -1,6 +1,6 @@
 """Cấu hình của app, đọc từ biến môi trường hoặc file .env ở thư mục gốc repo."""
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.5-flash-lite"
     # Frontend chạy ở đâu thì cho phép gọi API từ đó. Ngoài môi trường thật chỉ
     # cần viết CORS_ORIGINS=https://a.com,https://b.com (không cần định dạng JSON).
+    embed_model: str = "gemini-embedding-001"
+    # keyword = chỉ FTS5, vector = chỉ embedding, hybrid = trộn cả hai (mặc định).
+    # Có ba chế độ để bộ đánh giá đo được từng cách tìm hơn kém nhau bao nhiêu.
+    search_mode: Literal["keyword", "vector", "hybrid"] = "hybrid"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
     # chỗ lưu database SQLite
     db_path: Path = ROOT_DIR / "data" / "repolens.sqlite"
