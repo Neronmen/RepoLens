@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
+import { getLang, translate } from '../../i18n'
 import { streamAsk } from '../../lib/sse'
 import { buildHistory, turnsReducer, type Turn } from './turns'
 
@@ -41,10 +42,10 @@ export function useAsk(repoId: number) {
         )
         // luồng đóng mà không có "done" nghĩa là kết nối đứt giữa chừng
         if (!finished && !ctrl.signal.aborted) {
-          dispatch({ type: 'fail', id, message: 'Kết nối bị ngắt giữa chừng, thử lại nhé.' })
+          dispatch({ type: 'fail', id, message: translate(getLang(), 'error.cut') })
         }
       } catch (e) {
-        dispatch({ type: 'fail', id, message: e instanceof Error ? e.message : 'Có lỗi xảy ra, thử lại sau nhé.' })
+        dispatch({ type: 'fail', id, message: e instanceof Error ? e.message : translate(getLang(), 'error.generic') })
       }
     },
     [repoId],

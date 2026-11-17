@@ -93,6 +93,14 @@ const app = {
   'error.network': 'Could not reach the server. Check your connection and try again.',
   'error.validation': 'The data sent was not valid.',
   'error.cut': 'The connection dropped midway, please try again.',
+  'chat.copy': 'Copy',
+  'chat.copied': 'Copied',
+  'chat.retry': 'Try again',
+  'index.slow': 'Still working. The free server may have been asleep, the first request can take up to a minute.',
+  'topbar.semantic': 'semantic + keyword',
+  'topbar.keywordOnly': 'keyword search',
+  'topbar.semanticTitle': 'Searches by meaning and by exact words',
+  'topbar.keywordTitle': 'Searches by exact words. Semantic search turns on once vectors are ready (or is unavailable on this server).',
 } as const
 
 export default app

@@ -11,6 +11,8 @@ export type Repo = {
   indexed_at: string
   file_count: number
   chunk_count: number
+  /** true khi vector đã tạo xong và tìm theo nghĩa đang bật */
+  semantic?: boolean
 }
 
 export type IndexResult = Pick<Repo, 'id' | 'owner' | 'name' | 'file_count' | 'chunk_count'> & {

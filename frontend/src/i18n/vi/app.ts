@@ -91,6 +91,14 @@ const app = {
   'error.network': 'Không kết nối được tới server. Kiểm tra mạng rồi thử lại nhé.',
   'error.validation': 'Dữ liệu gửi lên không hợp lệ.',
   'error.cut': 'Kết nối bị ngắt giữa chừng, thử lại nhé.',
+  'chat.copy': 'Sao chép',
+  'chat.copied': 'Đã chép',
+  'chat.retry': 'Thử lại',
+  'index.slow': 'Vẫn đang chạy. Server miễn phí có thể đang ngủ, lần đầu có thể mất tới một phút.',
+  'topbar.semantic': 'theo nghĩa + từ khóa',
+  'topbar.keywordOnly': 'tìm từ khóa',
+  'topbar.semanticTitle': 'Tìm theo nghĩa và theo từ khóa chính xác',
+  'topbar.keywordTitle': 'Tìm theo từ khóa chính xác. Tìm theo nghĩa sẽ bật khi vector tạo xong (hoặc server này không hỗ trợ).',
 } as const
 
 export default app

@@ -57,7 +57,14 @@ export default function Chat({
             </div>
           </div>
         ) : (
-          turns.map((turn) => <TurnView key={turn.id} turn={turn} onOpenCode={onOpenCode} />)
+          turns.map((turn, i) => (
+            <TurnView
+              key={turn.id}
+              turn={turn}
+              onOpenCode={onOpenCode}
+              onRetry={!busy && i === turns.length - 1 ? () => ask(turn.question) : undefined}
+            />
+          ))
         )}
       </div>
       <Composer busy={busy} onSend={ask} onStop={onStop} />
@@ -65,8 +72,20 @@ export default function Chat({
   )
 }
 
-function TurnView({ turn, onOpenCode }: { turn: Turn; onOpenCode: OpenCode }) {
+function TurnView({ turn, onOpenCode, onRetry }: { turn: Turn; onOpenCode: OpenCode; onRetry?: () => void }) {
   const { t, tp } = useI18n()
+  const [copied, setCopied] = useState(false)
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(turn.answer)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // trình duyệt chặn clipboard (trang không an toàn...) thì thôi, người dùng vẫn bôi đen chép tay được
+    }
+  }
+
   const streaming = turn.status === 'streaming'
   const waiting = streaming && turn.steps.length === 0 && !turn.answer
   const u = turn.usage
@@ -84,6 +103,11 @@ function TurnView({ turn, onOpenCode }: { turn: Turn; onOpenCode: OpenCode }) {
             </svg>
             RepoLens
           </span>
+          {turn.status === 'done' && turn.answer && (
+            <button type="button" className={styles.copy} onClick={copy}>
+              {copied ? t('chat.copied') : t('chat.copy')}
+            </button>
+          )}
           {u && !streaming && (
             <span className={styles.cardMeta}>
               {t('trace.steps', { tools: tp('chat.toolCalls', u.tool_calls), secs: (u.ms / 1000).toFixed(1) })}
@@ -111,9 +135,19 @@ function TurnView({ turn, onOpenCode }: { turn: Turn; onOpenCode: OpenCode }) {
 
           {turn.status === 'stopped' && <p className={styles.stopped}>{t('chat.stopped')}</p>}
           {turn.status === 'error' && (
-            <p className={styles.error} role="alert">
-              {turn.error}
-            </p>
+            <div className={styles.error} role="alert">
+              <p>{turn.error}</p>
+              {onRetry && (
+                <button type="button" className={styles.retry} onClick={onRetry}>
+                  {t('chat.retry')}
+                </button>
+              )}
+            </div>
+          )}
+          {turn.status === 'stopped' && onRetry && (
+            <button type="button" className={styles.retry} onClick={onRetry}>
+              {t('chat.retry')}
+            </button>
           )}
         </div>
       </section>
