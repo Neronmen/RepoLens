@@ -162,3 +162,9 @@ def test_tran_chung_cho_ca_server(client, monkeypatch):
     monkeypatch.setattr(ratelimit.index_global, "_limit", lambda: 1)
     assert client.post("/api/repos", json={"url": "a/b"}).status_code == 201
     assert client.post("/api/repos", json={"url": "a/c"}).status_code == 429
+
+
+def test_tim_repo_theo_ten(client):
+    repo_id = client.post("/api/repos", json={"url": "a/b"}).json()["id"]
+    assert client.get("/api/repos/by-name/a/b").json()["id"] == repo_id
+    assert client.get("/api/repos/by-name/a/khong-co").status_code == 404

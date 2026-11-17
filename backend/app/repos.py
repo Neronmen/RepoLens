@@ -123,6 +123,15 @@ def list_repos(conn: sqlite3.Connection = Depends(get_db)):
     return [dict(r) for r in rows]
 
 
+@router.get("/by-name/{owner}/{name}")
+def find_repo(owner: str, name: str, conn: sqlite3.Connection = Depends(get_db)):
+    """Tìm repo đã lập chỉ mục theo tên. Mở lại một cuộc trò chuyện cũ cần nó, vì id đổi sau mỗi lần server khởi động lại."""
+    row = conn.execute("SELECT id FROM repos WHERE owner = ? AND name = ?", (owner, name)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail=str(REPO_NOT_FOUND))
+    return get_repo(row["id"], conn)
+
+
 @router.get("/{repo_id}")
 def get_repo(repo_id: int, conn: sqlite3.Connection = Depends(get_db)):
     # để trang hỏi đáp tải lại được mà không cần nhớ thông tin repo ở trình duyệt
