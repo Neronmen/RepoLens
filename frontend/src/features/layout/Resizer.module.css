@@ -1,0 +1,39 @@
+/* Vùng bấm rộng 10px cho dễ trúng, nhưng chỉ vẽ một đường mảnh ở giữa. */
+.bar {
+  position: relative;
+  flex: none;
+  width: 10px;
+  margin: 0 -5px; /* đè lên mép hai khung, không chiếm thêm chỗ */
+  z-index: 5;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 2px;
+  background: transparent;
+  transition: background-color 0.15s ease;
+}
+
+.bar:hover::after,
+.bar:focus-visible::after,
+.active::after {
+  background: var(--accent);
+}
+
+.bar:focus-visible {
+  outline: none;
+}
+
+/* Màn hẹp chỉ hiện một khung một lúc nên không có gì để kéo. */
+@media (max-width: 1099px) {
+  .bar {
+    display: none;
+  }
+}

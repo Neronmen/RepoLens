@@ -16,6 +16,15 @@
   gap: 32px;
 }
 
+/* Khung chat rộng ra thì nội dung vẫn nằm giữa, độ dài dòng dễ đọc. */
+.scroll > *,
+.composerWrap > * {
+  width: 100%;
+  max-width: 820px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .turn {
   display: flex;
   flex-direction: column;

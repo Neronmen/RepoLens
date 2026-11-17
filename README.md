@@ -20,6 +20,16 @@ It runs entirely on free tiers: no paid server, no paid database, no paid model.
   are streamed to the UI as they happen.
 - **Measured, not assumed.** A benchmark with hand-checked answers scores the agent on correctness,
   citation validity, honesty on unanswerable questions, latency and token cost (results below).
+- **Sign in with Google, chats that survive a refresh.** Signed-in users get every conversation saved
+  server-side (the server records each turn itself, so even a dropped connection keeps what was already
+  answered) and can reopen them from a history page. Guests keep their chat in the browser. If the free
+  server restarted and forgot the indexed repo, reopening a chat re-indexes it automatically.
+- **A workspace you can arrange.** File explorer, chat and code panels are resizable by dragging (or arrow
+  keys), the explorer collapses, the code panel only appears when you open a file or a citation and closes
+  like an editor tab, and the layout is remembered.
+- **Resilient to flaky networks.** Requests retry with backoff while a sleeping free server wakes up, a
+  dropped connection before the first token reconnects by itself, and an offline banner explains what is
+  happening.
 - **Bilingual (English / Vietnamese).** A language switch changes the whole interface instantly and is
   remembered. The browser sends an `X-Lang` header so server errors arrive in the same language, and the
   agent answers in the language of the question. A test fails the build if one language misses a string.
@@ -135,6 +145,27 @@ embeddings to matter, and the benchmark needs them before I can claim it.
   deploys on push. Turn on branch protection for `main` and two-factor login on GitHub and Vercel/Render.
 - **Known gap.** The rate limiter is in memory and per process, so it resets on restart.
 
+## Accounts and chat history
+
+Optional. With nothing configured the app runs in guest mode (the chat is kept in the browser).
+
+| Piece | Where it lives |
+|---|---|
+| Indexed repo code, FTS5, vectors | temporary SQLite on the server (a public copy, safe to lose) |
+| Users, conversations, turns | `DATABASE_URL`: a SQLite file locally, free Postgres (Neon, Supabase) when deployed |
+
+To turn it on:
+
+1. **Database.** Create a free Postgres on [Neon](https://neon.tech) and set `DATABASE_URL` on Render.
+2. **Google.** In Google Cloud Console create an OAuth client of type *Web application* and add your
+   Vercel URL (and `http://localhost:5173` for dev) under *Authorized JavaScript origins*. No redirect URI is
+   needed. Set `GOOGLE_CLIENT_ID` on Render.
+3. `SESSION_SECRET` signs the session token. `render.yaml` generates one for you.
+
+How it works: Google's button returns an ID token, the server verifies its signature, audience and verified
+email, then issues its own short-lived session token. Conversations are only readable by their owner, a user can
+delete their account and all data from the history page, and tables are created automatically on first start.
+
 ## Tech stack
 
 - **Backend:** Python 3.12, FastAPI, SQLite (FTS5 + vector BLOBs), Server-Sent Events, `google-genai`
@@ -184,6 +215,9 @@ cd backend && python -m eval.run      # the benchmark (uses your Gemini quota)
 |---|---|---|
 | `GEMINI_API_KEY` | backend | Gemini key, never commit it |
 | `GEMINI_MODEL` | backend | defaults to `gemini-3.5-flash-lite` |
+| `DATABASE_URL` | backend | accounts and chat history (default: local SQLite file) |
+| `GOOGLE_CLIENT_ID` | backend | enables Sign in with Google |
+| `SESSION_SECRET` | backend | signs session tokens, set a long random value |
 | `CORS_ORIGINS` | backend | comma-separated frontend URLs |
 | `TRUST_PROXY` | backend | `true` behind a proxy so rate limits see real IPs |
 | `ASK_LIMIT_PER_HOUR` / `INDEX_LIMIT_PER_HOUR` | backend | per-IP limits (30 / 10) |
@@ -192,7 +226,7 @@ cd backend && python -m eval.run      # the benchmark (uses your Gemini quota)
 ## Known limitations
 
 - Free hosting sleeps when idle and its disk is temporary, so indexed repos disappear after a restart
-  and the first request is slow. Re-adding a repo takes a few seconds.
+  and the first request is slow. RepoLens re-indexes automatically when you reopen a chat, which takes a few seconds.
 - Semantic search needs the Gemini embedding API. The free tier allows about 100 chunks per minute, so
   vectors are built in the background (at most 600 chunks per repo, roughly 6 minutes). Until they exist,
   and for chunks beyond the cap, search uses keywords only. The top bar shows which mode is active.

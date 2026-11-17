@@ -4,7 +4,7 @@
  * còn mình cần gửi câu hỏi và lịch sử trong body của POST.
  */
 import { getLang, translate } from '../i18n'
-import { API_BASE, langHeaders } from './api'
+import { API_BASE, ApiError, authHeaders, langHeaders } from './api'
 
 export type Citation = {
   path: string
@@ -55,7 +55,7 @@ export function parseBlock(block: string): AgentEvent | null {
 
 export async function streamAsk(
   repoId: number,
-  body: { question: string; history: HistoryItem[] },
+  body: { question: string; history: HistoryItem[]; conversation_id?: string },
   onEvent: (ev: AgentEvent) => void,
   signal: AbortSignal,
 ): Promise<void> {
@@ -63,18 +63,18 @@ export async function streamAsk(
   try {
     res = await fetch(`${API_BASE}/api/repos/${repoId}/ask`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...langHeaders() },
+      headers: { 'Content-Type': 'application/json', ...langHeaders(), ...authHeaders() },
       body: JSON.stringify(body),
       signal,
     })
   } catch (e) {
     if (signal.aborted) return
-    throw new Error(translate(getLang(), 'error.network'), { cause: e })
+    throw new ApiError(0, translate(getLang(), 'error.network'))
   }
 
   if (!res.ok || !res.body) {
     const detail = await res.json().then((b) => b?.detail).catch(() => null)
-    throw new Error(typeof detail === 'string' ? detail : translate(getLang(), 'error.generic'))
+    throw new ApiError(res.status, typeof detail === 'string' ? detail : translate(getLang(), 'error.generic'))
   }
 
   const reader = res.body.getReader()
@@ -95,6 +95,6 @@ export async function streamAsk(
     }
   } catch (e) {
     if (signal.aborted) return
-    throw new Error(translate(getLang(), 'error.cut'), { cause: e })
+    throw new ApiError(0, translate(getLang(), 'error.cut'))
   }
 }

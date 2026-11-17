@@ -24,13 +24,13 @@ export default function CodeViewer({
   owner,
   name,
   target,
-  onBack,
+  onClose,
 }: {
   repoId: number
   owner: string
   name: string
   target: CodeTarget | null
-  onBack: () => void
+  onClose: () => void
 }) {
   const { t } = useI18n()
   const [loaded, setLoaded] = useState<Loaded | null>(null)
@@ -100,7 +100,7 @@ export default function CodeViewer({
     return (
       <div className={styles.viewer}>
         <div className={styles.tabs}>
-          <button type="button" className={styles.back} onClick={onBack}>
+          <button type="button" className={styles.back} onClick={onClose}>
             {t('code.back')}
           </button>
         </div>
@@ -121,7 +121,7 @@ export default function CodeViewer({
     <div className={styles.viewer}>
       {/* thanh tab giống VS Code: huy hiệu loại file và tên file đang mở */}
       <div className={styles.tabs}>
-        <button type="button" className={styles.back} onClick={onBack}>
+        <button type="button" className={styles.back} onClick={onClose}>
           {t('code.back')}
         </button>
         <div className={styles.tab}>
@@ -130,6 +130,12 @@ export default function CodeViewer({
           </span>
           <span className={styles.tabName}>{file}</span>
         </div>
+        {/* đóng khung code như đóng tab trong VS Code: chat được trả lại toàn bộ chỗ */}
+        <button type="button" className={styles.close} onClick={onClose} aria-label={t('code.close')} title={t('code.close')}>
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        </button>
       </div>
 
       <div className={styles.crumbs}>

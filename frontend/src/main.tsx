@@ -8,6 +8,8 @@ const Landing = lazy(() => import('./pages/Landing'))
 const Indexing = lazy(() => import('./pages/Indexing'))
 const RepoPage = lazy(() => import('./pages/RepoPage'))
 const NotFound = lazy(() => import('./pages/NotFound'))
+const History = lazy(() => import('./pages/History'))
+const ConversationPage = lazy(() => import('./pages/ConversationPage'))
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -17,6 +19,8 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/" element={<Landing />} />
           <Route path="/index" element={<Indexing />} />
           <Route path="/r/:repoId" element={<RepoPage />} />
+          <Route path="/c/:cid" element={<ConversationPage />} />
+          <Route path="/history" element={<History />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import LanguageToggle from '../components/LanguageToggle'
 import Logo from '../components/Logo'
+import UserMenu from '../features/auth/UserMenu'
 import { useI18n } from '../i18n'
 import GraphScene from '../landing/GraphScene'
 import RepoForm from '../landing/RepoForm'
@@ -42,6 +43,7 @@ export default function Landing() {
                 {t('landing.nav.github')}
               </a>
               <LanguageToggle />
+              <UserMenu />
             </nav>
           </div>
         </div>

@@ -8,12 +8,14 @@ import styles from './Chat.module.css'
 export default function Chat({
   turns,
   busy,
+  reconnecting = false,
   onAsk,
   onStop,
   onOpenCode,
 }: {
   turns: Turn[]
   busy: boolean
+  reconnecting?: boolean
   onAsk: (q: string) => void
   onStop: () => void
   onOpenCode: OpenCode
@@ -61,6 +63,7 @@ export default function Chat({
             <TurnView
               key={turn.id}
               turn={turn}
+              reconnecting={reconnecting && i === turns.length - 1}
               onOpenCode={onOpenCode}
               onRetry={!busy && i === turns.length - 1 ? () => ask(turn.question) : undefined}
             />
@@ -72,7 +75,17 @@ export default function Chat({
   )
 }
 
-function TurnView({ turn, onOpenCode, onRetry }: { turn: Turn; onOpenCode: OpenCode; onRetry?: () => void }) {
+function TurnView({
+  turn,
+  onOpenCode,
+  onRetry,
+  reconnecting,
+}: {
+  turn: Turn
+  onOpenCode: OpenCode
+  onRetry?: () => void
+  reconnecting: boolean
+}) {
   const { t, tp } = useI18n()
   const [copied, setCopied] = useState(false)
 
@@ -120,7 +133,7 @@ function TurnView({ turn, onOpenCode, onRetry }: { turn: Turn; onOpenCode: OpenC
         <div className={styles.body}>
           {waiting && (
             <p className={styles.thinking}>
-              {t('chat.thinking')}
+              {reconnecting ? t('chat.reconnecting') : t('chat.thinking')}
               <span className={styles.dots} aria-hidden="true">
                 _
               </span>
