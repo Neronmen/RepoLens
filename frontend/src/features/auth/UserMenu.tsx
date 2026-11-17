@@ -32,7 +32,8 @@ export default function UserMenu() {
     }
   }, [open])
 
-  if (!cfg?.enabled) return null
+  if (!cfg) return <span className={styles.pending} aria-hidden="true" /> // server đang thức dậy, chưa biết có bật đăng nhập không
+  if (!cfg.enabled) return null
   if (status === 'out') return <GoogleButton />
   if (!user) return <span className={styles.pending} aria-hidden="true" /> // đang kiểm tra phiên đăng nhập
 
