@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import LanguageToggle from '../components/LanguageToggle'
 import Logo from '../components/Logo'
 import { useI18n } from '../i18n'
@@ -20,17 +20,24 @@ const STEPS = [
 export default function Landing() {
   const rootRef = useRef<HTMLDivElement>(null)
   useLandingMotion(rootRef)
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
   const { t } = useI18n()
 
   return (
     <div className={styles.page} ref={rootRef}>
-      <header className={styles.header}>
+      <header className={`${styles.header} ${scrolled ? styles.headerScrolled : ''}`}>
         <div className={styles.container}>
           <div className={styles.navRow}>
             <Logo />
             <nav aria-label={t('landing.nav.label')} className={styles.nav}>
-              <a href="#how" onClick={(e) => onAnchorClick(e, 'how', -40)}>{t('landing.nav.how')}</a>
-              <a href="#trace" onClick={(e) => onAnchorClick(e, 'trace', -40)}>{t('landing.nav.trace')}</a>
+              <a href="#how" onClick={(e) => onAnchorClick(e, 'how', 0)}>{t('landing.nav.how')}</a>
+              <a href="#trace" onClick={(e) => onAnchorClick(e, 'trace', 0)}>{t('landing.nav.trace')}</a>
               <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
                 {t('landing.nav.github')}
               </a>
