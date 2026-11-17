@@ -54,7 +54,7 @@ flowchart LR
 
 | Decision | Why |
 |---|---|
-| SQLite FTS5 instead of a vector database | One file, nothing to host, free everywhere, and bm25 over code identifiers works well. The agent can iterate with different keywords, which covers most of what embeddings would add. |
+| Hybrid search inside SQLite (FTS5 + embeddings), not a vector database | One file, nothing to host, free everywhere. Vectors are stored as BLOBs and compared in Python (a few thousand chunks scan in milliseconds). Keyword and vector rankings are merged with Reciprocal Rank Fusion, so no score tuning. If the embedding API is down or out of quota, search falls back to keywords. A dedicated vector DB would be the next step for repos with hundreds of thousands of chunks. |
 | Agent with tools instead of one-shot RAG | Questions like "how does X work" need the agent to follow references across files. A single retrieval step cannot. |
 | Citations verified server-side | LLMs misremember line numbers. Verification turns "plausible" into "checked". |
 | Read-only tools, repo id injected by the server | A model fooled by prompt injection in a file can still only read the repo it was asked about. Tool arguments named `repo_id` are discarded. |
@@ -100,9 +100,29 @@ based so results are repeatable and every failure has a readable reason. Full re
   difference is within the model's run-to-run variation, so I make no claim beyond the three fixes above.
   The benchmark needs more questions and more than one repo before it can rank small changes.
 
+## Does semantic search help? I measured it
+
+The same 18 questions, run three ways (`python -m eval.run --mode keyword|vector|hybrid`).
+5 of them were written to share almost no words with the code (for example "how can I replace my
+signing secret without breaking tokens people already hold?").
+
+| Search mode | Passed | Keyword-friendly (13) | Paraphrased (5) | Errors |
+|---|---|---|---|---|
+| keyword (FTS5 only) | 16 / 18 (88.9%) | 11 | 5 | 1 |
+| vector (embeddings only) | 17 / 18 (94.4%) | 12 | 5 | 0 |
+| hybrid (default) | 17 / 18 (94.4%) | 12 | 5 | 0 |
+
+**What this does and does not show.** The paraphrased questions passed in every mode: the agent
+rephrases its own searches until it finds the right file, so keyword search was already enough here.
+The one-question gap comes from `default-hash`, which errored in the keyword run (the agent used all its
+steps). That question passed in an earlier run too, so I treat it as run-to-run noise rather than
+proof that embeddings are better. One small repo (57 chunks), one run per mode and 18 questions cannot
+rank the three modes. Larger repos and vocabulary-mismatch questions are where I would expect
+embeddings to matter, and the benchmark needs them before I can claim it.
+
 ## Tech stack
 
-- **Backend:** Python 3.12, FastAPI, SQLite (FTS5), Server-Sent Events, `google-genai`
+- **Backend:** Python 3.12, FastAPI, SQLite (FTS5 + vector BLOBs), Server-Sent Events, `google-genai`
 - **Frontend:** React 19, TypeScript, Vite, React Router, Three.js, GSAP
 - **Tooling:** pytest, Vitest, GitHub Actions, Docker
 
@@ -158,8 +178,9 @@ cd backend && python -m eval.run      # the benchmark (uses your Gemini quota)
 
 - Free hosting sleeps when idle and its disk is temporary, so indexed repos disappear after a restart
   and the first request is slow. Re-adding a repo takes a few seconds.
-- Search is keyword-based. Questions that share no vocabulary with the code rely on the agent
-  rephrasing its search, which usually works but is not guaranteed.
+- Semantic search needs the Gemini embedding API. The free tier allows about 100 chunks per minute, so
+  vectors are built in the background (at most 600 chunks per repo, roughly 6 minutes). Until they exist,
+  and for chunks beyond the cap, search uses keywords only. The top bar shows which mode is active.
 - Citation links point to `HEAD`, so line numbers can drift if the repo changes after indexing.
 - Public repos only, up to 40 MB zipped.
 - The Gemini free tier rate-limits by the minute. Busy moments return a "try again" message.
