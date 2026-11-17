@@ -1,0 +1,18 @@
+# Cấu hình deploy backend lên Render (gói free). Dùng bằng cách: Render > New > Blueprint > chọn repo này.
+services:
+  - type: web
+    name: repolens-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false # tự dán trong trang quản lý của Render, không để trong git
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: CORS_ORIGINS
+        sync: false # địa chỉ frontend trên Vercel, ví dụ https://repolens.vercel.app
+      - key: TRUST_PROXY
+        value: "true" # Render đứng trước app, IP thật nằm ở X-Forwarded-For
