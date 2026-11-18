@@ -359,3 +359,43 @@ def test_key_trong_repo_bi_che_truoc_khi_toi_model_va_giao_dien():
     assert key not in gui_cho_nguoi_dung
     cau_tra_loi = "".join(e.data["text"] for e in events if e.type == "token")
     assert "AKIA****" in cau_tra_loi and "Hãy đổi ngay" in cau_tra_loi
+
+
+def test_tim_lien_tiep_ma_chua_mo_file_thi_bi_nhac_doc_file(db):
+    provider = ProviderKichBan([
+        [goi("search_code", query="a")],
+        [goi("search_code", query="b")],
+        [goi("search_code", query="c")],
+        [chu("Xong.")],
+    ])
+    chay(provider, db)
+
+    def ket_qua_cuoi(i):
+        return provider.da_nhan[i]["messages"][-1].tool_results[-1].content
+
+    assert "[Nhắc]" not in ket_qua_cuoi(1)  # mới tìm 1 lần
+    assert "[Nhắc]" in ket_qua_cuoi(2)  # tìm 2 lần liên tiếp
+    assert "[Nhắc]" in ket_qua_cuoi(3)
+
+
+def test_mo_file_thi_het_bi_nhac(db):
+    provider = ProviderKichBan([
+        [goi("search_code", query="a")],
+        [goi("read_file", path="src/auth.py")],
+        [goi("search_code", query="b")],
+        [chu("Xong.")],
+    ])
+    chay(provider, db)
+    assert all("[Nhắc]" not in str(m.tool_results) for m in provider.da_nhan[3]["messages"] if m.role == "tool")
+
+
+def test_goi_y_het_lan_truoc_thi_khong_chay_lai_va_bao_doi_cach(db):
+    provider = ProviderKichBan([
+        [goi("search_code", query="login")],
+        [goi("search_code", query="login")],
+        [chu("Xong.")],
+    ])
+    events = chay(provider, db)
+    ket_qua = provider.da_nhan[2]["messages"][-1].tool_results[-1].content
+    assert "đã gọi đúng như thế này rồi" in ket_qua
+    assert [e.type for e in events].count("tool_call") == 2  # vẫn báo cho giao diện thấy
