@@ -138,6 +138,9 @@ embeddings to matter, and the benchmark needs them before I can claim it.
   what kind, but never prints the value. Keys, tokens, JWTs, private keys, URL passwords and hard-coded
   `password = "..."` are masked (`AKIA****[masked]`) in tool results before the model sees them and again
   in the streamed answer, so it is enforced in code, not by asking the model nicely.
+  The code viewer is different on purpose: it shows the file exactly as it is in the public repo (the same
+  thing GitHub shows), so line numbers and content always match the citations. Masking applies to what the
+  agent says, not to the source itself.
 - **Scope and honesty.** The system prompt keeps the agent on the repo (off-topic questions are refused
   without spending tool calls) and tells it to say "not enough information" instead of guessing.
 - **Abuse limits.** Per-IP hourly limits on asking, indexing, searching and file reads, plus a
