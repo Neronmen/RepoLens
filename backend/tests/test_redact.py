@@ -51,3 +51,13 @@ def test_stream_giu_nguyen_noi_dung_khi_khong_co_bi_mat():
     s = StreamRedactor()
     chunks = ["Hàm ", "login ", "gọi ", "check", "Password ở ", "auth.py:12"]
     assert "".join(s.feed(c) for c in chunks) + s.flush() == "".join(chunks)
+
+
+def test_che_gia_tri_mac_dinh_viet_cung_sau_toan_tu_du_phong():
+    dong = 'const secureSecret = process.env.VNPAY_HASH_SECRET ?? "Q9X7K2M4P6R8T0V1W3Y5Z7B9D1F3H5J7";'
+    out = redact(dong)
+    assert "Q9X7K2M4P6R8T0V1W3Y5Z7B9D1F3H5J7" not in out
+    assert "process.env.VNPAY_HASH_SECRET" in out and "đã che" in out
+    assert redact('const port = process.env.PORT ?? "3000"') == 'const port = process.env.PORT ?? "3000"'
+    url = 'const ret = process.env.RETURN_URL ?? "https://example.com/api/v1/payment/vnpay-return"'
+    assert redact(url) == url

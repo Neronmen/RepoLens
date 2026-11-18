@@ -41,6 +41,15 @@ _ASSIGN = re.compile(
     (["'])([^"'\s\\]{8,})(\2)
     """
 )
+# Giá trị dự phòng viết cứng: `process.env.X ?? "chuỗi-bí-mật"` hay `|| "..."`. Biến môi trường thì không sao,
+# nhưng chuỗi đứng sau ?? / || mà dòng đó nói về secret/key/token thì gần như chắc chắn là bí mật thật.
+_FALLBACK = re.compile(
+    r"""(?ix)
+    ^(?P<head>[^\n]*(?:secret|token|passw|pwd|key|hash|salt)[^\n]*?(?:\?\?|\|\|)\s*)
+    (?P<q>["'])(?P<val>[A-Za-z0-9_\-+/=.]{16,})(?P=q)
+    """,
+    re.MULTILINE,
+)
 _PLACEHOLDER = re.compile(r"(?i)example|your[_\-]|xxxx|placeholder|changeme|<.*>|\$\{|\{\{|process\.env|^\*+")
 
 MASK = "****"
@@ -65,6 +74,12 @@ def redact(text: str) -> str:
     for label, pattern, keep in _TOKEN_PATTERNS:
         text = pattern.sub(lambda m, label=label, keep=keep: f"{_mask(m.group(0), keep)}[đã che: {label}]", text)
     text = _URL_CRED.sub(lambda m: f"{m.group(1)}{MASK}[đã che: mật khẩu]{m.group(3)}", text)
+    text = _FALLBACK.sub(
+        lambda m: m.group(0)
+        if _PLACEHOLDER.search(m.group("val"))
+        else f'{m.group("head")}{m.group("q")}{MASK}[đã che: giá trị mặc định viết cứng]{m.group("q")}',
+        text,
+    )
     return _ASSIGN.sub(_assign, text)
 
 
