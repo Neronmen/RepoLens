@@ -101,6 +101,46 @@
   animation: blink 1s steps(1) infinite;
 }
 
+.elapsed {
+  margin-left: 10px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Vạch chạy liên tục dưới khung trả lời: cho thấy hệ thống còn sống kể cả lúc chưa có chữ mới */
+.progress {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  background: var(--border);
+}
+
+.progress::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  background: var(--accent);
+  animation: slide 1.3s ease-in-out infinite;
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+}
+
 @keyframes blink {
   50% {
     opacity: 0;

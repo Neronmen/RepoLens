@@ -31,6 +31,7 @@ const app = {
   'chat.suggest2': 'Where is the main entry point?',
   'chat.suggest3': 'How does this project handle errors?',
   'chat.thinking': 'Thinking',
+  'chat.writing': 'Writing the answer',
   'chat.stopped': 'Stopped.',
   'chat.placeholder': 'Ask anything about this repo…',
   'chat.inputLabel': 'Ask a question about this repo',

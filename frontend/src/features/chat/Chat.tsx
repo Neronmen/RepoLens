@@ -100,7 +100,16 @@ function TurnView({
   }
 
   const streaming = turn.status === 'streaming'
-  const waiting = streaming && turn.steps.length === 0 && !turn.answer
+  // Chưa có chữ nào của câu trả lời: kể cả khi các bước công cụ đã chạy xong, model vẫn đang viết.
+  // Trước đây lúc đó không hiện gì nên người dùng tưởng đứng máy.
+  const waiting = streaming && !turn.answer
+  const [secs, setSecs] = useState(0)
+  useEffect(() => {
+    if (!streaming) return
+    const t0 = Date.now()
+    const id = window.setInterval(() => setSecs(Math.floor((Date.now() - t0) / 1000)), 1000)
+    return () => window.clearInterval(id)
+  }, [streaming])
   const u = turn.usage
 
   return (
@@ -133,10 +142,11 @@ function TurnView({
         <div className={styles.body}>
           {waiting && (
             <p className={styles.thinking}>
-              {reconnecting ? t('chat.reconnecting') : t('chat.thinking')}
+              {reconnecting ? t('chat.reconnecting') : turn.steps.length === 0 ? t('chat.thinking') : t('chat.writing')}
               <span className={styles.dots} aria-hidden="true">
                 _
               </span>
+              <span className={styles.elapsed}>{secs}s</span>
             </p>
           )}
           {turn.notes.length > 0 && turn.answer === '' && streaming && (
@@ -163,6 +173,7 @@ function TurnView({
             </button>
           )}
         </div>
+        {streaming && <div className={styles.progress} role="presentation" />}
       </section>
 
       {u && !streaming && (

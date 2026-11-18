@@ -31,6 +31,7 @@ const app = {
   'chat.suggest2': 'Điểm bắt đầu chạy của chương trình nằm ở đâu?',
   'chat.suggest3': 'Dự án này xử lý lỗi như thế nào?',
   'chat.thinking': 'Đang suy nghĩ',
+  'chat.writing': 'Đang viết câu trả lời',
   'chat.stopped': 'Đã dừng.',
   'chat.placeholder': 'Hỏi bất cứ điều gì về repo này…',
   'chat.inputLabel': 'Đặt câu hỏi về repo này',
