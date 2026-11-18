@@ -167,3 +167,31 @@ def test_ket_qua_qua_dai_bi_cat(db, monkeypatch):
     monkeypatch.setattr("app.agent.tools.MAX_OUTPUT_CHARS", 200)
     out = run_tool(conn, repo, "read_file", {"path": "src/auth.py"})
     assert len(out) < 260 and "đã cắt bớt" in out
+
+
+def test_scan_secrets_tim_ra_secret_viet_cung_va_che_gia_tri():
+    from app.db import connect
+    from app.ingest.service import index_repo
+    from tests.test_ingest import tao_zip
+
+    secret = "Q9X7K2M4P6R8T0V1W3Y5Z7B9D1F3H5J7"
+    conn = connect(":memory:")
+    stats = index_repo(conn, "a", "b", tao_zip({
+        "r/src/pay.ts": f'const s = process.env.HASH_SECRET ?? "{secret}";\nconst port = process.env.PORT ?? "3000";\n',
+        "r/src/ok.ts": "const k = process.env.API_KEY\n",
+    }))
+    out = run_tool(conn, stats.repo_id, "scan_secrets", {})
+    assert "src/pay.ts:1" in out and "src/ok.ts" not in out
+    assert secret not in out and "đã che" in out
+    assert "Đã quét 2 file" in out and "lịch sử Git" in out
+
+
+def test_scan_secrets_sach_thi_noi_ro_pham_vi_da_quet():
+    from app.db import connect
+    from app.ingest.service import index_repo
+    from tests.test_ingest import tao_zip
+
+    conn = connect(":memory:")
+    stats = index_repo(conn, "a", "b", tao_zip({"r/a.py": "x = 1\n"}))
+    out = run_tool(conn, stats.repo_id, "scan_secrets", {})
+    assert out.startswith("Không phát hiện") and "Đã quét 1 file" in out

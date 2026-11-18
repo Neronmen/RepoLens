@@ -83,6 +83,30 @@ def redact(text: str) -> str:
     return _ASSIGN.sub(_assign, text)
 
 
+_LABEL = re.compile(r"\[đã che: ([^\]]+)\]")
+MAX_SCAN_LINE = 1500  # dòng dài hơn thế (file đã nén, dữ liệu base64...) chỉ gây nhiễu
+
+
+def find_secrets(content: str) -> list[tuple[int, str, str]]:
+    """Quét từng dòng của một file, trả về [(số dòng, loại, dòng đã che)] cho mọi dòng trông như chứa bí mật.
+
+    Dùng đúng bộ mẫu của `redact`: thứ gì redact sẽ che thì ở đây được báo là phát hiện.
+    """
+    found: list[tuple[int, str, str]] = []
+    if "PRIVATE KEY-----" in content:
+        for n, line in enumerate(content.splitlines(), 1):
+            if "BEGIN" in line and "PRIVATE KEY-----" in line:
+                found.append((n, "private key", line.strip()[:120]))
+    for n, line in enumerate(content.splitlines(), 1):
+        if len(line) > MAX_SCAN_LINE or "BEGIN" in line and "PRIVATE KEY" in line:
+            continue
+        safe = redact(line)
+        if safe != line:
+            m = _LABEL.search(safe)
+            found.append((n, m.group(1) if m else "bí mật", safe.strip()[:160]))
+    return found
+
+
 @dataclass
 class StreamRedactor:
     """Che chữ đang chảy từng mẩu nhỏ. Một key có thể bị cắt đôi giữa hai mẩu, nên chỉ phát ra

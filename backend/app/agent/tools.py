@@ -9,6 +9,7 @@ import sqlite3
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.agent.redact import find_secrets
 from app.search import hybrid_search
 from app.ingest.chunker import split_lines
 from app.providers.base import ToolSpec
@@ -17,6 +18,8 @@ MAX_READ_LINES = 150
 MAX_GREP_MATCHES = 30
 MAX_LIST_FILES = 200
 MAX_OUTPUT_CHARS = 9000
+MAX_SECRET_FINDINGS = 40
+MAX_SCAN_FILE_CHARS = 400_000
 SEARCH_PREVIEW_LINES = 20
 
 TOOLS = [
@@ -64,6 +67,24 @@ TOOLS = [
                 "path_prefix": {
                     "type": "string",
                     "description": "Chỉ liệt kê trong thư mục này (tùy chọn), ví dụ 'src/'",
+                },
+            },
+        },
+    ),
+    ToolSpec(
+        name="scan_secrets",
+        description=(
+            "Quét TOÀN BỘ file trong repo tìm key, token, mật khẩu hoặc giá trị bí mật viết cứng "
+            "(AWS, Google, GitHub, JWT, private key, password/secret gán cứng, process.env.X ?? \"giá trị\"...). "
+            "Trả về file, dòng và loại; giá trị đã được che. LUÔN dùng công cụ này đầu tiên cho câu hỏi "
+            "về lộ key, mật khẩu, secret, hay bảo mật thông tin nhạy cảm, thay vì tự search_code."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "path_prefix": {
+                    "type": "string",
+                    "description": "Chỉ quét trong thư mục này (tùy chọn), ví dụ 'src/'",
                 },
             },
         },
@@ -219,6 +240,42 @@ def list_files(
     return ToolOutput("\n".join(out))
 
 
+def scan_secrets(
+    conn: sqlite3.Connection, repo_id: int, path_prefix: Any = "", **_: Any
+) -> ToolOutput:
+    """Quét cả repo bằng bộ mẫu bí mật. Chắc chắn hơn việc để model tự search_code vài lần rồi kết luận."""
+    prefix = _clean_prefix(path_prefix)
+    rows = conn.execute(
+        "SELECT path, content FROM files WHERE repo_id = ? AND path LIKE ? ESCAPE '\\' ORDER BY path",
+        (repo_id, _like_prefix(prefix)),
+    ).fetchall()
+    findings: list[str] = []
+    total = 0
+    hit_paths: set[str] = set()
+    scanned = 0
+    for r in rows:
+        if len(r["content"]) > MAX_SCAN_FILE_CHARS:
+            continue  # bỏ qua file khổng lồ (dữ liệu, bản nén), nói rõ ở cuối
+        scanned += 1
+        for line_no, label, snippet in find_secrets(r["content"]):
+            total += 1
+            hit_paths.add(r["path"])
+            if len(findings) < MAX_SECRET_FINDINGS:
+                findings.append(f"{r['path']}:{line_no}  [{label}]  {snippet}")
+    skipped = len(rows) - scanned
+    scope = (
+        f"Đã quét {scanned} file" + (f" (bỏ qua {skipped} file quá lớn)" if skipped else "") + ". "
+        "Chỉ quét mã nguồn hiện tại theo các mẫu đã biết: không quét lịch sử Git, file .env nằm ngoài repo, "
+        "hay chuỗi ngẫu nhiên không có dấu hiệu nào."
+    )
+    if not total:
+        return ToolOutput(f"Không phát hiện mẫu bí mật nào. {scope}")
+    more = f"\n... và {total - len(findings)} dòng nữa." if total > len(findings) else ""
+    # các file có phát hiện được tính là "đã thấy nội dung" để trích dẫn dòng đó được kiểm chứng
+    head = f"Phát hiện {total} dòng nghi chứa bí mật (giá trị đã được che):\n"
+    return ToolOutput(head + "\n".join(findings) + more + "\n" + scope, hit_paths)
+
+
 def read_file(
     conn: sqlite3.Connection,
     repo_id: int,
@@ -252,6 +309,7 @@ _HANDLERS = {
     "search_code": search_code,
     "grep": grep,
     "list_files": list_files,
+    "scan_secrets": scan_secrets,
     "read_file": read_file,
 }
 

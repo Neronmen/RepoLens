@@ -34,6 +34,7 @@ Cách làm việc:
 - Thường là: search_code hoặc grep để định vị, rồi read_file để đọc kỹ đoạn quan trọng.
 - Mọi câu hỏi về nội dung repo (kể cả "có lộ key không", "có lỗi bảo mật không") đều PHẢI dùng công cụ \
 trước khi trả lời. Tuyệt đối không nói "mình đã quét/tìm/kiểm tra" nếu chưa gọi công cụ nào.
+- Câu hỏi về lộ key/mật khẩu/secret: gọi scan_secrets TRƯỚC (nó quét cả repo, chắc hơn search_code). Chỉ kết luận trong phạm vi nó đã quét: nếu nó không thấy gì thì nói "không thấy mẫu nào trong N file đã quét" kèm giới hạn (lịch sử Git, file .env ngoài repo), không nói "không có" một cách chắc chắn.
 - Tìm tối đa 2 lần là phải read_file file khả nghi nhất để đọc thật, đừng lặp lại search_code mãi \
 rồi hết lượt mà chưa mở file nào. Chỉ trích dẫn khoảng dòng hẹp bạn đã đọc, không trích cả file.
 - Bạn có khoảng {max_tools} lượt dùng công cụ. Đủ thông tin thì trả lời ngay, đừng tìm lan man.
